@@ -10,6 +10,18 @@
 **Dataset:** ./data
 **GPU Resources:** https://aistation2.shanghaitech.edu.cn:32206/
 
+## Environment Setup with uv
+Use `uv` as the package manager for local development and HPC runs. The locked environment lives in `pyproject.toml` and `uv.lock`, while `requirements.txt` is kept only for compatibility.
+
+```bash
+cd projects/project1-text-classification
+UV_CACHE_DIR=/tmp/uv-cache uv sync
+source .venv/bin/activate
+uv run python train.py
+```
+
+If the HPC already provides Python 3.11, keep the same major/minor version there. If needed, create the environment explicitly with `UV_CACHE_DIR=/tmp/uv-cache uv venv --python 3.11`.
+
 ## 1. Introduction
 Sentiment analysis is a classic text classification task that aims to determine the emotional polarity (positive/negative) of a given document. Over the past few decades, many neural architectures have been proposed – from simple recurrent and convolutional networks to large pre‑training based models – each offering different trade‑offs between accuracy, speed, and complexity.
 

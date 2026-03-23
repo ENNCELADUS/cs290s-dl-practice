@@ -1,3 +1,5 @@
+# Legacy compatibility file.
+# The source of truth for dependencies is pyproject.toml + uv.lock.
 torch==2.2.2
 tqdm==4.67.1
 tensorboard==2.20.0

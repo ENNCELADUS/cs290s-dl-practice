@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch / Deep Learning
+*.pt
+*.pth
+*.ckpt
+checkpoints/
+runs/
+wandb/
+.tensorboard-info/
+
+# Data and Logs
+data/
+datasets/
+logs/
+*.csv
+*.log
+*.zip
+*.tar.gz
+*.tgz
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo

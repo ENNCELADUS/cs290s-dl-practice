@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import logging
 import random
 from pathlib import Path
@@ -28,6 +29,7 @@ LOGGER = logging.getLogger(__name__)
 DEFAULT_CONFIG_PATH = Path("./configs/lstm_classifier.toml")
 
 __all__ = [
+    "build_run_name",
     "compute_classification_metrics",
     "create_data_loaders",
     "run_training",
@@ -61,6 +63,12 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def build_run_name(experiment_name: str) -> str:
+    """Build a timestamped TensorBoard run name."""
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"{experiment_name}_{timestamp}"
 
 
 def create_data_loaders(
@@ -208,6 +216,8 @@ def run_training(experiment_config: ExperimentConfig) -> None:
     set_seed(experiment_config.training.seed)
     experiment_config.output.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     experiment_config.output.log_dir.mkdir(parents=True, exist_ok=True)
+    run_name = build_run_name(experiment_config.experiment_name)
+    run_log_dir = experiment_config.output.log_dir / run_name
 
     train_loader, val_loader, text_encoder = create_data_loaders(experiment_config)
     model = build_text_classifier(
@@ -223,15 +233,22 @@ def run_training(experiment_config: ExperimentConfig) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     LOGGER.info(
-        "Loaded experiment=%s model=%s train_batches=%s val_batches=%s device=%s",
+        (
+            "Loaded experiment=%s model=%s train_batches=%s val_batches=%s "
+            "device=%s log_dir=%s"
+        ),
         experiment_config.experiment_name,
         experiment_config.model.name,
         len(train_loader),
         len(val_loader),
         device,
+        run_log_dir,
     )
 
-    writer = SummaryWriter(log_dir=str(experiment_config.output.log_dir))
+    writer = SummaryWriter(
+        log_dir=str(run_log_dir),
+        filename_suffix=f".{run_name}",
+    )
     best_macro_f1 = float("-inf")
     total_steps = 0
     checkpoint_path = experiment_config.output.checkpoint_dir / "best_model.pt"

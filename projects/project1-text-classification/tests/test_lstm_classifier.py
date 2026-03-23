@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from torch.utils.data import DataLoader
 
@@ -14,7 +15,7 @@ from data import (
     load_text_examples,
 )
 from models import LstmClassifier, build_text_classifier
-from train import compute_classification_metrics
+from train import build_run_name, compute_classification_metrics
 
 
 def test_load_experiment_config_uses_explicit_lstm_names() -> None:
@@ -104,3 +105,9 @@ def test_compute_classification_metrics_returns_valid_scores() -> None:
     assert set(metrics) == {"accuracy", "precision", "recall", "f1", "macro_f1"}
     for value in metrics.values():
         assert 0.0 <= value <= 1.0
+
+
+def test_build_run_name_appends_timestamp() -> None:
+    run_name = build_run_name("lstm_classifier")
+
+    assert re.fullmatch(r"lstm_classifier_\d{8}-\d{6}", run_name) is not None

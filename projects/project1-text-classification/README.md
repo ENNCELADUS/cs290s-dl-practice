@@ -17,7 +17,17 @@ Use `uv` as the package manager for local development and HPC runs. The locked e
 cd projects/project1-text-classification
 UV_CACHE_DIR=/tmp/uv-cache uv sync
 source .venv/bin/activate
-uv run python train.py
+uv run python train.py --config ./configs/lstm_classifier.toml
+```
+
+Named experiment configs live in `configs/`, for example:
+- `configs/lstm_classifier.toml`
+- `configs/bert_classifier.toml`
+
+For transformer experiments, you may pre-download the backbone with Hugging Face CLI:
+
+```bash
+hf download hfl/chinese-roberta-wwm-ext --local-dir ./hf_models/chinese-roberta-wwm-ext
 ```
 
 If the HPC already provides Python 3.11, keep the same major/minor version there. If needed, create the environment explicitly with `UV_CACHE_DIR=/tmp/uv-cache uv venv --python 3.11`.

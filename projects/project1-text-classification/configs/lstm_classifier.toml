@@ -1,0 +1,33 @@
+[experiment]
+name = "lstm_classifier"
+
+[data]
+train_csv = "./data/train.csv"
+val_csv = "./data/val.csv"
+text_field = "review"
+label_field = "label"
+encoding = "character"
+max_length = 256
+min_frequency = 1
+
+[model]
+name = "lstm_classifier"
+
+[model_parameters]
+embedding_dim = 128
+hidden_dim = 128
+num_classes = 2
+num_layers = 1
+dropout = 0.3
+
+[training]
+batch_size = 64
+learning_rate = 1e-3
+weight_decay = 1e-2
+epochs = 8
+val_steps = 200
+seed = 42
+
+[output]
+checkpoint_dir = "./checkpoints/lstm_classifier"
+log_dir = "./runs/lstm_classifier"

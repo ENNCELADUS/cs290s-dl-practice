@@ -1,0 +1,32 @@
+[experiment]
+name = "bert_classifier"
+
+[data]
+train_csv = "./data/train.csv"
+val_csv = "./data/val.csv"
+text_field = "review"
+label_field = "label"
+encoding = "transformer"
+max_length = 256
+pretrained_model_name = "hfl/chinese-roberta-wwm-ext"
+
+[model]
+name = "bert_classifier"
+
+[model_parameters]
+pretrained_model_name = "hfl/chinese-roberta-wwm-ext"
+num_classes = 2
+classifier_hidden_dim = 256
+dropout = 0.1
+
+[training]
+batch_size = 16
+learning_rate = 2e-5
+weight_decay = 1e-2
+epochs = 3
+val_steps = 200
+seed = 42
+
+[output]
+checkpoint_dir = "./checkpoints/bert_classifier"
+log_dir = "./runs/bert_classifier"

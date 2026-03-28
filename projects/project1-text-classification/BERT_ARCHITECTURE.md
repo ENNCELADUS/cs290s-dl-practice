@@ -1,9 +1,9 @@
-# BERT Classifier Architecture
+# Advanced BERT Classifier Architecture
 
 This document distinguishes between:
 
 - the raw pretrained Hugging Face backbone loaded as `BertModel`
-- your final instantiated model, which wraps that backbone with `CLS` pooling and a 2-layer MLP sentiment-classification head
+- your advanced instantiated model, which wraps that backbone with LoRA adapters plus fused `CLS`, mean, and attention pooling before classification
 
 ## Overview
 
@@ -12,14 +12,14 @@ This document distinguishes between:
 - Task: binary sentiment classification
 - Inputs: `input_ids`, `attention_mask` (max_length = 256)
 - Outputs: 2-class logits for `negative` and `positive`
-- Total parameters: **102,465,026** (all trainable)
+- Adaptation strategy: freeze the pretrained backbone, add LoRA to upper attention layers, and train the fusion head
 
 ## PyTorch Model Print
 
-Instantiated via `bert_classifier.toml` (`classifier_hidden_dim=256`, `dropout=0.1`, `pooling=cls`):
+Instantiated via `bert_classifier_advanced.toml` (`classifier_hidden_dim=256`, `lora_rank=8`, `lora_target_layers=4`):
 
 ```text
-BertClassifier(
+BertClassifierAdvanced(
   (encoder): BertModel(
     (embeddings): BertEmbeddings(
       (word_embeddings): Embedding(21128, 768, padding_idx=0)
@@ -154,20 +154,20 @@ pooler.dense.bias
 
 ## Connection To Your Implementation
 
-- Your custom class is defined in `models/bert_classifier.py`.
+- Your custom class is defined in `models/bert_classifier_advanced.py`.
 - It loads the raw pretrained backbone with `AutoModel.from_pretrained(...)`.
 - It does not use the pretrained MLM head from the original published checkpoint.
 - It also does not use `pooler_output` in the current implementation.
-- Instead, it takes `outputs.last_hidden_state[:, 0]` and applies your own MLP classifier head.
+- Instead, it injects LoRA adapters into the upper transformer attention layers and fuses `CLS`, masked mean, and learned attention pooling before the classifier head.
 
 ## Wrapped Model
 
-- Pooling: `CLS`
-- Wrapped head: `Linear(768, 256) -> GELU -> Dropout -> Linear(256, 2)`
-- Config: `configs/bert_classifier.toml`
+- Pooling: `CLS + masked mean + attention pooling`
+- Wrapped head: `Linear(768 * 3, 256) -> GELU -> Dropout -> Linear(256, 2)`
+- Config: `configs/bert_classifier_advanced.toml`
 
 ## Code Mapping
 
-- Backbone wrapper: `models/bert_classifier.py`
+- Backbone wrapper: `models/bert_classifier_advanced.py`
 - Model factory: `models/__init__.py`
-- Config: `configs/bert_classifier.toml`
+- Config: `configs/bert_classifier_advanced.toml`

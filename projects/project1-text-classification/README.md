@@ -23,6 +23,7 @@ uv run python train.py --config ./configs/lstm_classifier.toml
 Named experiment configs live in `configs/`, for example:
 - `configs/lstm_classifier.toml`
 - `configs/bert_classifier.toml`
+- `configs/bert_classifier_advanced.toml`
 
 For transformer experiments, you may pre-download the backbone with Hugging Face CLI:
 

@@ -1,4 +1,4 @@
-"""BERT-style classifier for transformer-based text classification."""
+"""Baseline BERT classifier with masked mean pooling."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ __all__ = ["BertClassifier"]
 
 
 class BertClassifier(nn.Module):
-    """Pretrained BERT encoder with CLS pooling and a 2-layer MLP head."""
+    """Pretrained BERT encoder with masked mean pooling and a simple MLP head."""
 
     def __init__(
         self,
@@ -35,6 +35,17 @@ class BertClassifier(nn.Module):
         )
         self.classifier = nn.Linear(classifier_hidden_dim, num_classes)
 
+    def mean_pool(
+        self,
+        token_embeddings: torch.Tensor,
+        attention_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        """Pool token embeddings with a mask-aware mean."""
+        mask = attention_mask.unsqueeze(-1).type_as(token_embeddings)
+        masked_embeddings = token_embeddings * mask
+        token_counts = mask.sum(dim=1).clamp_min(1.0)
+        return masked_embeddings.sum(dim=1) / token_counts
+
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -44,6 +55,9 @@ class BertClassifier(nn.Module):
             input_ids=input_ids,
             attention_mask=attention_mask,
         )
-        pooled_output = outputs.last_hidden_state[:, 0]
+        pooled_output = self.mean_pool(
+            token_embeddings=outputs.last_hidden_state,
+            attention_mask=attention_mask,
+        )
         projected_features = self.projection(pooled_output)
         return self.classifier(projected_features)

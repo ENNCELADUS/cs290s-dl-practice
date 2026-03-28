@@ -6,10 +6,12 @@ from torch import nn
 
 from config import ModelConfig
 from models.bert_classifier import BertClassifier
+from models.bert_classifier_advanced import BertClassifierAdvanced
 from models.lstm_classifier import LstmClassifier
 
 __all__ = [
     "BertClassifier",
+    "BertClassifierAdvanced",
     "LstmClassifier",
     "build_text_classifier",
 ]
@@ -44,6 +46,18 @@ def build_text_classifier(
             num_classes=int(parameters["num_classes"]),
             classifier_hidden_dim=int(parameters.get("classifier_hidden_dim", 256)),
             dropout=float(parameters.get("dropout", 0.1)),
+        )
+
+    if model_config.name == "bert_classifier_advanced":
+        return BertClassifierAdvanced(
+            pretrained_model_name=str(parameters["pretrained_model_name"]),
+            num_classes=int(parameters["num_classes"]),
+            classifier_hidden_dim=int(parameters.get("classifier_hidden_dim", 256)),
+            dropout=float(parameters.get("dropout", 0.1)),
+            lora_rank=int(parameters.get("lora_rank", 8)),
+            lora_alpha=float(parameters.get("lora_alpha", 16.0)),
+            lora_dropout=float(parameters.get("lora_dropout", 0.05)),
+            lora_target_layers=int(parameters.get("lora_target_layers", 4)),
         )
 
     raise ValueError(f"Unsupported model name: {model_config.name}")

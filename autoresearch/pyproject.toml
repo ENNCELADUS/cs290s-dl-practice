@@ -1,0 +1,16 @@
+[project]
+name = "autoresearch-project1-bert-advanced"
+version = "0.1.0"
+description = "Autoresearch sandbox for the CS290S Project 1 advanced BERT experiment."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "huggingface_hub>=0.34,<1",
+    "setuptools<70",
+    "torch==2.2.2",
+    "tqdm==4.67.1",
+    "transformers>=4.41,<4.42",
+]
+
+[tool.uv]
+package = false

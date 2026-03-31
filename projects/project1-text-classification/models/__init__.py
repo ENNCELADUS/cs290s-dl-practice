@@ -52,12 +52,21 @@ def build_text_classifier(
         return BertClassifierAdvanced(
             pretrained_model_name=str(parameters["pretrained_model_name"]),
             num_classes=int(parameters["num_classes"]),
-            classifier_hidden_dim=int(parameters.get("classifier_hidden_dim", 256)),
-            dropout=float(parameters.get("dropout", 0.1)),
-            lora_rank=int(parameters.get("lora_rank", 8)),
-            lora_alpha=float(parameters.get("lora_alpha", 16.0)),
-            lora_dropout=float(parameters.get("lora_dropout", 0.05)),
-            lora_target_layers=int(parameters.get("lora_target_layers", 4)),
+            classifier_hidden_dim=int(parameters.get("classifier_hidden_dim", 512)),
+            dropout=float(parameters.get("dropout", 0.08)),
+            layer_mix_depth=int(parameters.get("layer_mix_depth", 4)),
+            enable_bitfit=bool(parameters.get("enable_bitfit", True)),
+            enable_layer_norm_tuning=bool(
+                parameters.get("enable_layer_norm_tuning", False)
+            ),
+            lora_rank=int(parameters.get("lora_rank", 24)),
+            lora_alpha=float(parameters.get("lora_alpha", 32.0)),
+            lora_dropout=float(parameters.get("lora_dropout", 0.0)),
+            lora_target_layers=int(parameters.get("lora_target_layers", 12)),
+            lora_output_target_layers=int(
+                parameters.get("lora_output_target_layers", 4)
+            ),
+            unfreeze_top_layers=int(parameters.get("unfreeze_top_layers", 0)),
         )
 
     raise ValueError(f"Unsupported model name: {model_config.name}")

@@ -1,4 +1,4 @@
-"""Advanced BERT classifier with LoRA and semantic pooling fusion."""
+"""Advanced BERT classifier with layer mixing, gated pooling, and LoRA."""
 
 from __future__ import annotations
 
@@ -68,18 +68,23 @@ class LoRALinear(nn.Module):
 
 
 class BertClassifierAdvanced(nn.Module):
-    """Pretrained BERT encoder with LoRA and fused semantic pooling."""
+    """Pretrained BERT encoder with explainable pooled representations."""
 
     def __init__(
         self,
         pretrained_model_name: str,
         num_classes: int,
-        classifier_hidden_dim: int = 256,
-        dropout: float = 0.1,
-        lora_rank: int = 8,
-        lora_alpha: float = 16.0,
-        lora_dropout: float = 0.05,
-        lora_target_layers: int = 4,
+        classifier_hidden_dim: int = 512,
+        dropout: float = 0.08,
+        layer_mix_depth: int = 4,
+        enable_bitfit: bool = True,
+        enable_layer_norm_tuning: bool = False,
+        lora_rank: int = 24,
+        lora_alpha: float = 32.0,
+        lora_dropout: float = 0.0,
+        lora_target_layers: int = 12,
+        lora_output_target_layers: int = 4,
+        unfreeze_top_layers: int = 0,
     ) -> None:
         super().__init__()
         try:
@@ -89,19 +94,35 @@ class BertClassifierAdvanced(nn.Module):
                 "BertClassifierAdvanced requires the transformers package."
             ) from error
 
-        self.encoder = AutoModel.from_pretrained(pretrained_model_name)
+        self.layer_mix_depth = layer_mix_depth
+        self.enable_bitfit = enable_bitfit
+        self.enable_layer_norm_tuning = enable_layer_norm_tuning
+        self.unfreeze_top_layers = unfreeze_top_layers
+        try:
+            self.encoder = AutoModel.from_pretrained(
+                pretrained_model_name,
+                local_files_only=True,
+            )
+        except TypeError:
+            self.encoder = AutoModel.from_pretrained(pretrained_model_name)
+
         self._freeze_encoder_parameters()
         self._inject_lora_adapters(
             rank=lora_rank,
             alpha=lora_alpha,
             dropout=lora_dropout,
             target_layers=lora_target_layers,
+            output_target_layers=lora_output_target_layers,
         )
+        self._enable_low_cost_encoder_tuning()
 
         hidden_size = int(self.encoder.config.hidden_size)
+        self.layer_mix_logits = nn.Parameter(torch.zeros(layer_mix_depth))
         self.attention_pooler = nn.Linear(hidden_size, 1)
+        self.pool_gate = nn.Linear(hidden_size * 4, 4)
+        self.feature_norm = nn.LayerNorm(hidden_size * 5)
         self.projection = nn.Sequential(
-            nn.Linear(hidden_size * 3, classifier_hidden_dim),
+            nn.Linear(hidden_size * 5, classifier_hidden_dim),
             nn.GELU(),
             nn.Dropout(p=dropout),
         )
@@ -111,6 +132,11 @@ class BertClassifierAdvanced(nn.Module):
         """Freeze pretrained backbone weights before adding LoRA adapters."""
         for parameter in self.encoder.parameters():
             parameter.requires_grad = False
+        if self.unfreeze_top_layers <= 0:
+            return
+        for layer in self.encoder.encoder.layer[-self.unfreeze_top_layers :]:
+            for parameter in layer.parameters():
+                parameter.requires_grad = True
 
     def _inject_lora_adapters(
         self,
@@ -118,8 +144,9 @@ class BertClassifierAdvanced(nn.Module):
         alpha: float,
         dropout: float,
         target_layers: int,
+        output_target_layers: int,
     ) -> None:
-        """Attach LoRA modules to query/value projections in upper layers."""
+        """Attach LoRA modules to selected encoder projections."""
         encoder_layers = self.encoder.encoder.layer
         total_layers = len(encoder_layers)
         selected_layers = encoder_layers[max(total_layers - target_layers, 0) :]
@@ -131,12 +158,53 @@ class BertClassifierAdvanced(nn.Module):
                 alpha=alpha,
                 dropout=dropout,
             )
+            attention_block.key = LoRALinear.from_linear(
+                linear=attention_block.key,
+                rank=rank,
+                alpha=alpha,
+                dropout=dropout,
+            )
             attention_block.value = LoRALinear.from_linear(
                 linear=attention_block.value,
                 rank=rank,
                 alpha=alpha,
                 dropout=dropout,
             )
+
+        selected_output_layers = encoder_layers[
+            max(total_layers - output_target_layers, 0) :
+        ]
+        for layer in selected_output_layers:
+            layer.attention.output.dense = LoRALinear.from_linear(
+                linear=layer.attention.output.dense,
+                rank=rank,
+                alpha=alpha,
+                dropout=dropout,
+            )
+
+    def _enable_low_cost_encoder_tuning(self) -> None:
+        """Unfreeze only low-cost normalization and bias parameters."""
+        for name, parameter in self.encoder.named_parameters():
+            is_layer_norm_parameter = "LayerNorm" in name
+            is_bias_parameter = name.endswith(".bias")
+            if self.enable_layer_norm_tuning and is_layer_norm_parameter:
+                parameter.requires_grad = True
+            elif self.enable_bitfit and is_bias_parameter:
+                parameter.requires_grad = True
+
+    def mix_hidden_layers(
+        self,
+        hidden_states: tuple[torch.Tensor, ...],
+    ) -> torch.Tensor:
+        """Learn a weighted mixture of the top encoder hidden states."""
+        if len(hidden_states) < self.layer_mix_depth:
+            raise ValueError("Not enough hidden states available for layer mixing.")
+        selected_hidden_states = hidden_states[-self.layer_mix_depth :]
+        mix_weights = torch.softmax(self.layer_mix_logits, dim=0).view(-1, 1, 1, 1)
+        mixed_hidden_states = torch.zeros_like(selected_hidden_states[0])
+        for weight, hidden_state in zip(mix_weights, selected_hidden_states):
+            mixed_hidden_states = mixed_hidden_states + (weight * hidden_state)
+        return mixed_hidden_states
 
     def mean_pool(
         self,
@@ -164,12 +232,22 @@ class BertClassifierAdvanced(nn.Module):
         attention_weights = torch.softmax(attention_scores, dim=1).unsqueeze(-1)
         return (token_embeddings * attention_weights).sum(dim=1)
 
+    def max_pool(
+        self,
+        token_embeddings: torch.Tensor,
+        attention_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        """Pool token embeddings with a mask-aware max."""
+        mask = attention_mask.unsqueeze(-1).bool()
+        masked_embeddings = token_embeddings.masked_fill(~mask, torch.finfo(token_embeddings.dtype).min)
+        return masked_embeddings.max(dim=1).values
+
     def pool_features(
         self,
         token_embeddings: torch.Tensor,
         attention_mask: torch.Tensor,
     ) -> torch.Tensor:
-        """Fuse CLS, mean, and attention pooling into one representation."""
+        """Fuse CLS, mean, attention, and max pooling with a learned gate."""
         cls_features = token_embeddings[:, 0]
         mean_features = self.mean_pool(
             token_embeddings=token_embeddings,
@@ -179,10 +257,31 @@ class BertClassifierAdvanced(nn.Module):
             token_embeddings=token_embeddings,
             attention_mask=attention_mask,
         )
-        return torch.cat(
-            [cls_features, mean_features, attention_features],
+        max_features = self.max_pool(
+            token_embeddings=token_embeddings,
+            attention_mask=attention_mask,
+        )
+        pooled_stack = torch.stack(
+            [cls_features, mean_features, attention_features, max_features],
             dim=1,
         )
+        gate_inputs = torch.cat(
+            [cls_features, mean_features, attention_features, max_features],
+            dim=1,
+        )
+        gate_weights = torch.softmax(self.pool_gate(gate_inputs), dim=1).unsqueeze(-1)
+        gated_features = (pooled_stack * gate_weights).sum(dim=1)
+        combined_features = torch.cat(
+            [
+                cls_features,
+                mean_features,
+                attention_features,
+                max_features,
+                gated_features,
+            ],
+            dim=1,
+        )
+        return self.feature_norm(combined_features)
 
     def forward(
         self,
@@ -190,12 +289,24 @@ class BertClassifierAdvanced(nn.Module):
         attention_mask: torch.Tensor,
     ) -> torch.Tensor:
         """Encode text, fuse semantic pooling signals, and classify."""
-        outputs = self.encoder(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-        )
+        try:
+            outputs = self.encoder(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=True,
+            )
+        except TypeError:
+            outputs = self.encoder(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+            )
+        hidden_states = getattr(outputs, "hidden_states", None)
+        if hidden_states is None:
+            token_embeddings = outputs.last_hidden_state
+        else:
+            token_embeddings = self.mix_hidden_layers(hidden_states)
         pooled_features = self.pool_features(
-            token_embeddings=outputs.last_hidden_state,
+            token_embeddings=token_embeddings,
             attention_mask=attention_mask,
         )
         projected_features = self.projection(pooled_features)

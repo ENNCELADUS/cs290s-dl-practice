@@ -25,6 +25,20 @@ Named experiment configs live in `configs/`, for example:
 - `configs/bert_classifier.toml`
 - `configs/bert_classifier_advanced.toml`
 
+Training logs are written to `runs/<experiment_name>/<timestamped_run>/` and the best
+checkpoint is written to `checkpoints/<experiment_name>/best_model.pt`. To inspect a
+run, start TensorBoard from the project root:
+
+```bash
+tensorboard --logdir ./runs
+```
+
+For example, the advanced BERT run `bert_classifier_advanced_20260331-025421` writes
+TensorBoard events under
+`runs/bert_classifier_advanced/bert_classifier_advanced_20260331-025421/`, including
+files such as
+`events.out.tfevents.1774896863.richard-Lenovo-ThinkBook-16p-Gen-4.601938.0.bert_classifier_advanced_20260331-025421`.
+
 For transformer experiments, you may pre-download the backbone with Hugging Face CLI:
 
 ```bash

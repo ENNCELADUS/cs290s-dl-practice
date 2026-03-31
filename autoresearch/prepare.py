@@ -57,7 +57,10 @@ class TransformerTextEncoder:
             ) from error
 
         self.pretrained_model_name = pretrained_model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name,
+            local_files_only=True,
+        )
 
     def encode(self, text: str, max_length: int) -> dict[str, list[int]]:
         """Encode text into padded transformer inputs."""

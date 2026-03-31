@@ -46,10 +46,13 @@ class TrainingConfig:
 
     batch_size: int
     learning_rate: float
+    encoder_learning_rate: float
     weight_decay: float
     epochs: int
     val_steps: int
     seed: int
+    warmup_ratio: float
+    final_lr_scale: float
 
 
 @dataclass(frozen=True)
@@ -120,10 +123,18 @@ def load_experiment_config(config_path: str | Path) -> ExperimentConfig:
         training=TrainingConfig(
             batch_size=int(training_section["batch_size"]),
             learning_rate=float(training_section["learning_rate"]),
+            encoder_learning_rate=float(
+                training_section.get(
+                    "encoder_learning_rate",
+                    training_section["learning_rate"],
+                )
+            ),
             weight_decay=float(training_section["weight_decay"]),
             epochs=int(training_section["epochs"]),
             val_steps=int(training_section["val_steps"]),
             seed=int(training_section["seed"]),
+            warmup_ratio=float(training_section.get("warmup_ratio", 0.0)),
+            final_lr_scale=float(training_section.get("final_lr_scale", 1.0)),
         ),
         output=OutputConfig(
             checkpoint_dir=_resolve_path(base_dir, output_section["checkpoint_dir"]),

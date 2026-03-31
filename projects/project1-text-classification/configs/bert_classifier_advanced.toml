@@ -16,20 +16,28 @@ name = "bert_classifier_advanced"
 [model_parameters]
 pretrained_model_name = "hfl/chinese-roberta-wwm-ext"
 num_classes = 2
-classifier_hidden_dim = 256
-dropout = 0.1
-lora_rank = 8
-lora_alpha = 16.0
-lora_dropout = 0.05
-lora_target_layers = 4
+classifier_hidden_dim = 512
+dropout = 0.08
+layer_mix_depth = 4
+enable_bitfit = true
+enable_layer_norm_tuning = false
+lora_rank = 24
+lora_alpha = 32.0
+lora_dropout = 0.0
+lora_target_layers = 12
+lora_output_target_layers = 4
+unfreeze_top_layers = 0
 
 [training]
-batch_size = 16
-learning_rate = 2e-5
-weight_decay = 1e-2
-epochs = 3
-val_steps = 200
+batch_size = 12
+learning_rate = 5.1261745611921186e-05
+encoder_learning_rate = 3.9139370975328926e-05
+weight_decay = 0.0016864974751216414
+epochs = 4
+val_steps = 417
 seed = 42
+warmup_ratio = 0.1499362438641551
+final_lr_scale = 0.05
 
 [output]
 checkpoint_dir = "./checkpoints/bert_classifier_advanced"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import logging
+import math
 import random
 from pathlib import Path
 
@@ -211,6 +212,46 @@ def forward_batch(
     return logits, labels
 
 
+def split_parameter_groups(
+    model: torch.nn.Module,
+) -> tuple[list[torch.nn.Parameter], list[torch.nn.Parameter]]:
+    """Separate encoder-owned parameters from classifier-head parameters."""
+    encoder_parameters: list[torch.nn.Parameter] = []
+    adapter_parameters: list[torch.nn.Parameter] = []
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        if name.startswith("encoder."):
+            encoder_parameters.append(parameter)
+        else:
+            adapter_parameters.append(parameter)
+    return encoder_parameters, adapter_parameters
+
+
+def create_scheduler(
+    optimizer: torch.optim.Optimizer,
+    total_training_steps: int,
+    experiment_config: ExperimentConfig,
+) -> torch.optim.lr_scheduler.LambdaLR:
+    """Create a warmup-plus-cosine decay schedule."""
+    warmup_steps = int(total_training_steps * experiment_config.training.warmup_ratio)
+
+    def lr_lambda(current_step: int) -> float:
+        if warmup_steps > 0 and current_step < warmup_steps:
+            return float(current_step + 1) / float(warmup_steps)
+        if total_training_steps <= warmup_steps:
+            return 1.0
+        progress = (current_step - warmup_steps) / float(
+            total_training_steps - warmup_steps
+        )
+        cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
+        return experiment_config.training.final_lr_scale + (
+            (1.0 - experiment_config.training.final_lr_scale) * cosine_decay
+        )
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+
 def run_training(experiment_config: ExperimentConfig) -> None:
     """Train the configured model and save the best checkpoint."""
     set_seed(experiment_config.training.seed)
@@ -225,12 +266,37 @@ def run_training(experiment_config: ExperimentConfig) -> None:
         vocabulary_size=text_encoder.vocabulary_size,
         pad_id=text_encoder.pad_id,
     )
+    encoder_parameters, adapter_parameters = split_parameter_groups(model=model)
+    optimizer_groups: list[dict[str, object]] = []
+    if encoder_parameters:
+        optimizer_groups.append(
+            {
+                "params": encoder_parameters,
+                "lr": experiment_config.training.encoder_learning_rate,
+            }
+        )
+    if adapter_parameters:
+        optimizer_groups.append(
+            {
+                "params": adapter_parameters,
+                "lr": experiment_config.training.learning_rate,
+            }
+        )
     optimizer = AdamW(
-        model.parameters(),
-        lr=experiment_config.training.learning_rate,
+        optimizer_groups,
         weight_decay=experiment_config.training.weight_decay,
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats(device)
+        torch.set_float32_matmul_precision("high")
+    total_training_steps = experiment_config.training.epochs * len(train_loader)
+    scheduler = create_scheduler(
+        optimizer=optimizer,
+        total_training_steps=total_training_steps,
+        experiment_config=experiment_config,
+    )
 
     LOGGER.info(
         (
@@ -273,6 +339,7 @@ def run_training(experiment_config: ExperimentConfig) -> None:
             loss = F.cross_entropy(logits, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             batch_size = labels.size(0)
             epoch_loss += loss.item() * batch_size
@@ -280,6 +347,23 @@ def run_training(experiment_config: ExperimentConfig) -> None:
             total_steps += 1
 
             writer.add_scalar("loss/train_step", loss.item(), total_steps)
+            if len(optimizer.param_groups) == 1:
+                writer.add_scalar(
+                    "lr/main",
+                    optimizer.param_groups[0]["lr"],
+                    total_steps,
+                )
+            else:
+                writer.add_scalar(
+                    "lr/encoder",
+                    optimizer.param_groups[0]["lr"],
+                    total_steps,
+                )
+                writer.add_scalar(
+                    "lr/adapter",
+                    optimizer.param_groups[1]["lr"],
+                    total_steps,
+                )
             progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
             if total_steps % experiment_config.training.val_steps == 0:

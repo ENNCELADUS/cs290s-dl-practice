@@ -69,6 +69,8 @@ class _FakeAttention(torch.nn.Module):
     def __init__(self, hidden_size: int) -> None:
         super().__init__()
         self.self = _FakeSelfAttention(hidden_size=hidden_size)
+        self.output = torch.nn.Module()
+        self.output.dense = torch.nn.Linear(hidden_size, hidden_size)
 
 
 class _FakeLayer(torch.nn.Module):
@@ -98,18 +100,30 @@ class _FakeAutoModel(torch.nn.Module):
         self.encoder = _FakeEncoder(hidden_size=hidden_size, num_layers=num_layers)
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name: str) -> "_FakeAutoModel":
-        del pretrained_model_name
+    def from_pretrained(
+        cls,
+        pretrained_model_name: str,
+        local_files_only: bool | None = None,
+    ) -> "_FakeAutoModel":
+        del pretrained_model_name, local_files_only
         return cls()
 
     def forward(
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
+        output_hidden_states: bool = False,
     ) -> types.SimpleNamespace:
         del attention_mask
         hidden_states = input_ids.unsqueeze(-1).float().repeat(1, 1, 12)
-        return types.SimpleNamespace(last_hidden_state=hidden_states)
+        if output_hidden_states:
+            stacked_hidden_states = tuple(hidden_states + index for index in range(5))
+        else:
+            stacked_hidden_states = None
+        return types.SimpleNamespace(
+            last_hidden_state=hidden_states,
+            hidden_states=stacked_hidden_states,
+        )
 
 
 def _build_transformer_batch() -> dict[str, torch.Tensor]:
@@ -235,12 +249,17 @@ def test_build_text_classifier_can_construct_advanced_bert_variant() -> None:
         parameters={
             "pretrained_model_name": "hfl/chinese-roberta-wwm-ext",
             "num_classes": 2,
-            "classifier_hidden_dim": 256,
-            "dropout": 0.1,
+            "classifier_hidden_dim": 512,
+            "dropout": 0.08,
+            "layer_mix_depth": 4,
+            "enable_bitfit": True,
+            "enable_layer_norm_tuning": False,
             "lora_rank": 4,
             "lora_alpha": 8.0,
-            "lora_dropout": 0.05,
+            "lora_dropout": 0.0,
             "lora_target_layers": 2,
+            "lora_output_target_layers": 1,
+            "unfreeze_top_layers": 0,
         },
     )
 
@@ -260,10 +279,14 @@ def test_advanced_bert_classifier_forward_output_shape() -> None:
         num_classes=2,
         classifier_hidden_dim=24,
         dropout=0.0,
+        layer_mix_depth=4,
+        enable_bitfit=True,
+        enable_layer_norm_tuning=False,
         lora_rank=2,
         lora_alpha=4.0,
         lora_dropout=0.0,
         lora_target_layers=2,
+        lora_output_target_layers=1,
     )
 
     logits = model(
@@ -274,43 +297,59 @@ def test_advanced_bert_classifier_forward_output_shape() -> None:
     assert logits.shape == (4, 2)
 
 
-def test_advanced_bert_classifier_replaces_query_and_value_with_lora_on_top_layers() -> None:
+def test_advanced_bert_classifier_replaces_attention_projections_with_lora_on_top_layers() -> None:
     model = BertClassifierAdvanced(
         pretrained_model_name="hfl/chinese-roberta-wwm-ext",
         num_classes=2,
         classifier_hidden_dim=24,
         dropout=0.0,
+        layer_mix_depth=4,
+        enable_bitfit=True,
+        enable_layer_norm_tuning=False,
         lora_rank=2,
         lora_alpha=4.0,
         lora_dropout=0.0,
         lora_target_layers=2,
+        lora_output_target_layers=1,
     )
     encoder_layers = model.encoder.encoder.layer
 
     assert isinstance(encoder_layers[0].attention.self.query, torch.nn.Linear)
+    assert isinstance(encoder_layers[0].attention.self.key, torch.nn.Linear)
     assert isinstance(encoder_layers[0].attention.self.value, torch.nn.Linear)
     assert isinstance(encoder_layers[1].attention.self.query, torch.nn.Linear)
+    assert isinstance(encoder_layers[1].attention.self.key, torch.nn.Linear)
     assert isinstance(encoder_layers[1].attention.self.value, torch.nn.Linear)
     assert isinstance(encoder_layers[2].attention.self.query, LoRALinear)
+    assert isinstance(encoder_layers[2].attention.self.key, LoRALinear)
     assert isinstance(encoder_layers[2].attention.self.value, LoRALinear)
     assert isinstance(encoder_layers[3].attention.self.query, LoRALinear)
+    assert isinstance(encoder_layers[3].attention.self.key, LoRALinear)
     assert isinstance(encoder_layers[3].attention.self.value, LoRALinear)
+    assert isinstance(encoder_layers[2].attention.output.dense, torch.nn.Linear)
+    assert isinstance(encoder_layers[3].attention.output.dense, LoRALinear)
 
 
-def test_advanced_bert_classifier_fuses_cls_mean_and_attention_pooling() -> None:
+def test_advanced_bert_classifier_fuses_multiple_pooling_views_with_gate() -> None:
     model = BertClassifierAdvanced(
         pretrained_model_name="hfl/chinese-roberta-wwm-ext",
         num_classes=2,
         classifier_hidden_dim=24,
         dropout=0.0,
+        layer_mix_depth=4,
+        enable_bitfit=True,
+        enable_layer_norm_tuning=False,
         lora_rank=2,
         lora_alpha=4.0,
         lora_dropout=0.0,
         lora_target_layers=2,
+        lora_output_target_layers=1,
     )
     with torch.no_grad():
         model.attention_pooler.weight.zero_()
         model.attention_pooler.bias.zero_()
+        model.pool_gate.weight.zero_()
+        model.pool_gate.bias.zero_()
 
     token_embeddings = torch.tensor(
         [
@@ -329,7 +368,4 @@ def test_advanced_bert_classifier_fuses_cls_mean_and_attention_pooling() -> None
         attention_mask=attention_mask,
     )
 
-    assert pooled_features.shape == (1, 36)
-    assert torch.allclose(pooled_features[:, :12], torch.tensor([[1.0] * 12]))
-    assert torch.allclose(pooled_features[:, 12:24], torch.tensor([[3.0] * 12]))
-    assert torch.allclose(pooled_features[:, 24:], torch.tensor([[3.0] * 12]))
+    assert pooled_features.shape == (1, 60)

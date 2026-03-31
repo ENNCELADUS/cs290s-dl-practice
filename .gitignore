@@ -46,3 +46,13 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# LaTeX
+*.aux
+*.bbl
+*.blg
+*.fls
+*.out
+*.toc
+*.fdb_latexmk
+*.synctex.gz

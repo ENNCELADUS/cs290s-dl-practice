@@ -171,7 +171,7 @@ def test_transformer_encoder_dataset_and_collate_shapes() -> None:
     assert batch["labels"].shape == (4,)
 
 
-def test_bert_classifier_forward_output_shape_for_mean_pooling() -> None:
+def test_bert_classifier_forward_output_shape_for_configured_baseline() -> None:
     experiment_config = load_experiment_config(Path("./configs/bert_classifier.toml"))
     batch = _build_transformer_batch()
 
@@ -200,8 +200,21 @@ def test_bert_classifier_uses_two_layer_mlp_head() -> None:
     assert isinstance(model, BertClassifier)
     assert isinstance(model.projection, torch.nn.Sequential)
     assert isinstance(model.classifier, torch.nn.Linear)
-    assert model.classifier.in_features == 256
+    assert model.classifier.in_features == 512
     assert model.classifier.out_features == 2
+
+
+def test_bert_classifier_config_freezes_encoder_and_uses_cls_pooling() -> None:
+    experiment_config = load_experiment_config(Path("./configs/bert_classifier.toml"))
+    model = build_text_classifier(
+        model_config=experiment_config.model,
+        vocabulary_size=None,
+        pad_id=None,
+    )
+
+    assert isinstance(model, BertClassifier)
+    assert model.pooling_strategy == "cls"
+    assert all(not parameter.requires_grad for parameter in model.encoder.parameters())
 
 
 def test_bert_classifier_uses_masked_mean_pooling() -> None:
@@ -241,6 +254,29 @@ def test_bert_classifier_uses_masked_mean_pooling() -> None:
         ]
     )
     assert torch.allclose(pooled_output, expected)
+
+
+def test_bert_classifier_can_freeze_encoder_and_use_cls_pooling() -> None:
+    model = BertClassifier(
+        pretrained_model_name="hfl/chinese-roberta-wwm-ext",
+        num_classes=2,
+        classifier_hidden_dim=12,
+        dropout=0.0,
+        freeze_encoder=True,
+        pooling_strategy="cls",
+    )
+
+    assert all(not parameter.requires_grad for parameter in model.encoder.parameters())
+
+    input_ids = torch.tensor([[10, 20, 30, 0]], dtype=torch.long)
+    attention_mask = torch.tensor([[1, 1, 1, 0]], dtype=torch.long)
+    outputs = model.encoder(input_ids=input_ids, attention_mask=attention_mask)
+    cls_features = outputs.last_hidden_state[:, 0]
+
+    logits = model(input_ids=input_ids, attention_mask=attention_mask)
+
+    assert torch.allclose(cls_features, torch.tensor([[10.0] * 12]))
+    assert logits.shape == (1, 2)
 
 
 def test_build_text_classifier_can_construct_advanced_bert_variant() -> None:

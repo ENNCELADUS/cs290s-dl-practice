@@ -46,6 +46,8 @@ def build_text_classifier(
             num_classes=int(parameters["num_classes"]),
             classifier_hidden_dim=int(parameters.get("classifier_hidden_dim", 256)),
             dropout=float(parameters.get("dropout", 0.1)),
+            freeze_encoder=bool(parameters.get("freeze_encoder", False)),
+            pooling_strategy=str(parameters.get("pooling_strategy", "mean")),
         )
 
     if model_config.name == "bert_classifier_advanced":

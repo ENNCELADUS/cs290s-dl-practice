@@ -173,18 +173,19 @@ as a fixed feature extractor with a simple trainable classification head.
 \begin{enumerate}
   \item \textbf{Encoder.}  \texttt{hfl/chinese-roberta-wwm-ext}, a 12-layer
     Transformer with 768-dimensional hidden states and 12 attention heads.
-  \item \textbf{Pooling.}  Masked mean pooling over all non-padding token
-    representations from the final encoder layer.
-  \item \textbf{Projection MLP.}  A linear projection from 768 to a 256-dimensional
+  \item \textbf{Pooling.}  The \texttt{[CLS]} token representation from the
+    final encoder layer is used as the sentence vector.
+  \item \textbf{Projection MLP.}  A linear projection from 768 to a 512-dimensional
     hidden representation, followed by GELU activation and dropout with
-    probability~0.1.
+    probability~0.08.
   \item \textbf{Classification head.}  A linear layer producing 2-class logits.
 \end{enumerate}
 
-The model has 102{,}465{,}026 total and trainable parameters.  The masked mean
-pooling summarises the full token sequence into a single vector that retains
-average contextual information; it is more stable than \texttt{[CLS]}-only
-pooling but may under-weight polarity-indicating content words.
+The encoder is fully frozen; only the projection MLP and classification head
+are trained, giving approximately 394{,}754 trainable parameters out of
+$\sim$102\,M total.  Using a frozen encoder makes the model fast to train and
+avoids overfitting on the small task-specific dataset, but limits the
+backbone's ability to adapt its representations to the sentiment domain.
 
 \subsection{Advanced Task: Baseline and Modified Architecture}
 \label{sec:advanced}
@@ -484,8 +485,7 @@ of full fine-tuning.
 The most striking result from the basic-task comparison is that the character-level
 BiLSTM \emph{outperforms} the frozen RoBERTa baseline on accuracy and macro F1
 despite having only 0.25\% as many parameters.  This outcome is not entirely
-surprising given the task context.  The frozen baseline requires the classification
-head to summarise the full sequence through mean pooling and project it to a
+surprising given the task context.  The frozen baseline extracts only the \texttt{[CLS]} token and projects it to a
 decision boundary, but the classification head receives no gradient signal from
 the encoder---the pretrained representations are static.  By contrast, the BiLSTM
 is fully trainable end-to-end, so every parameter is optimised directly for the

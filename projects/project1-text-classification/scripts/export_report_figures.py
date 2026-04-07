@@ -295,7 +295,12 @@ def export_main_curves(
     run_scalars: dict[str, dict[str, list[tuple[int, float]]]],
 ) -> list[Path]:
     """Export the 2×2 main-curve comparison figure."""
-    fig, axes = plt.subplots(2, 2, figsize=(11.5, 7.6), constrained_layout=True)
+    fig, axes = plt.subplots(
+        2, 2,
+        figsize=(11.5, 8.4),
+        layout="constrained",
+    )
+    fig.get_layout_engine().set(rect=(0, 0, 1, 0.91))
 
     for ax, (tag, title, ylabel, maximize) in zip(axes.flat, CURVE_SPECS, strict=True):
         _plot_panel(
@@ -307,7 +312,7 @@ def export_main_curves(
             maximize=maximize,
         )
 
-    # Shared legend above the grid
+    # Shared legend above the grid – placed inside the reserved top margin
     legend_handles = [
         Line2D(
             [0], [0],
@@ -325,16 +330,17 @@ def export_main_curves(
         handles=legend_handles,
         loc="upper center",
         ncol=2,
-        bbox_to_anchor=(0.5, 1.03),
+        bbox_to_anchor=(0.5, 0.995),
         columnspacing=2.0,
         handletextpad=0.6,
         borderpad=0.5,
     )
     fig.suptitle(
         "Controlled Frozen Baseline vs. Advanced BERT – Training Dynamics",
-        y=1.065,
+        y=1.0,
         fontsize=12,
         fontweight="semibold",
+        va="bottom",
     )
 
     outputs = [
@@ -355,32 +361,40 @@ def export_learning_rates(
     """Export the learning-rate schedule comparison."""
     fig, ax = plt.subplots(figsize=(9.5, 3.8), constrained_layout=True)
 
-    curves: list[tuple[np.ndarray, np.ndarray, str, str, str]] = [
+    # The baseline uses a single param group → logs lr/main only.
+    # The advanced model uses two param groups → logs lr/adapter and lr/encoder.
+    # The baseline LR and the advanced adapter LR share the same schedule, so
+    # both lines are drawn with distinct styles (dashed vs. solid) to remain
+    # visible on top of each other.
+    curves: list[tuple[np.ndarray, np.ndarray, str, str, float, str]] = [
         (
             *extract_xy(run_scalars["matched"], "lr/main"),
             PALETTE["blue"],
-            "-",
+            "--",
+            2.5,
             "Baseline main LR",
         ),
         (
             *extract_xy(run_scalars["advanced"], "lr/adapter"),
             PALETTE["orange"],
             "-",
+            2.0,
             "Advanced adapter / head LR",
         ),
         (
             *extract_xy(run_scalars["advanced"], "lr/encoder"),
             PALETTE["green"],
             "--",
+            2.0,
             "Advanced encoder LR",
         ),
     ]
 
-    for xs, ys, color, ls, label in curves:
+    for xs, ys, color, ls, lw, label in curves:
         if xs.size == 0:
             log.warning("Learning-rate tag not found for label '%s'.", label)
             continue
-        ax.plot(xs, ys, color=color, lw=2.0, linestyle=ls, label=label, zorder=3)
+        ax.plot(xs, ys, color=color, lw=lw, linestyle=ls, label=label, zorder=3)
         # Peak marker
         peak_idx = int(np.argmax(ys))
         ax.scatter(

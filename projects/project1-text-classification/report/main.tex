@@ -40,11 +40,11 @@ a character-level bidirectional LSTM with a pretrained RoBERTa-based classifier.
 For the advanced task we extend the RoBERTa baseline with layer mixing, gated
 multi-view pooling, and parameter-efficient adaptation via LoRA and BitFit.
 Under a controlled matched-baseline protocol the advanced architecture improves
-validation macro F1 from 0.8622 to 0.9317 (+0.0695), reduces validation loss
-from 0.2166 to 0.1435, and achieves 95.80\% accuracy, while training only
-$3.57$M parameters out of 105.7M total---confirming that careful feature
-aggregation and targeted adaptation are more effective than naïve full
-fine-tuning.
+validation macro F1 from 0.9085 to 0.9317 (+0.0232), reduces validation loss
+from 0.1711 to 0.1435, and achieves 95.80\% accuracy.  The strengthened frozen
+baseline already uses gated multi-view pooling, so the remaining gain isolates
+the value of layer mixing and parameter-efficient encoder adaptation on top of
+that stronger head.
 \end{abstract}
 
 % ---------------------------------------------------------------------------
@@ -73,9 +73,9 @@ rigorous empirical comparison of recurrent and Transformer architectures on the
 same dataset under identical evaluation conditions, demonstrating that
 pretrained contextual representations provide a substantial advantage.  Second,
 we introduce and evaluate a controlled architectural modification that adds
-layer mixing, gated multi-view pooling, and LoRA-based adaptation on top of a
-frozen RoBERTa encoder, showing a macro F1 improvement of $+0.0695$ over a
-matched frozen-head baseline.  Third, we show that the improvement survives
+layer mixing, max-augmented pooling, and LoRA-based adaptation on top of a
+stronger frozen RoBERTa baseline, showing a macro F1 improvement of $+0.0232$
+over the matched baseline.  Third, we show that the improvement survives
 migration from a hyperparameter-search sandbox into the project training
 pipeline, confirming reproducibility.  Finally, we present a detailed analysis
 connecting the observed performance gains to specific architectural choices,
@@ -168,24 +168,27 @@ signal alone.
 \label{sec:bert-baseline}
 
 The second model uses a pretrained Chinese RoBERTa encoder \citep{cui2020revisiting}
-as a fixed feature extractor with a simple trainable classification head.
+as a fixed feature extractor with a stronger trainable pooling head.
 
 \begin{enumerate}
   \item \textbf{Encoder.}  \texttt{hfl/chinese-roberta-wwm-ext}, a 12-layer
     Transformer with 768-dimensional hidden states and 12 attention heads.
-  \item \textbf{Pooling.}  The \texttt{[CLS]} token representation from the
-    final encoder layer is used as the sentence vector.
-  \item \textbf{Projection MLP.}  A linear projection from 768 to a 512-dimensional
-    hidden representation, followed by GELU activation and dropout with
-    probability~0.08.
+  \item \textbf{Pooling.}  The final-layer token embeddings are summarized with
+    four fused views: the configured anchor view (\texttt{[CLS]} in our run),
+    masked mean pooling, learned attention pooling, and a gated combination of
+    those three views.  The concatenated representation is layer-normalized
+    before classification.
+  \item \textbf{Projection MLP.}  A linear projection from the 3072-dimensional
+    fused representation to a 512-dimensional hidden representation, followed
+    by GELU activation and dropout with probability~0.08.
   \item \textbf{Classification head.}  A linear layer producing 2-class logits.
 \end{enumerate}
 
-The encoder is fully frozen; only the projection MLP and classification head
-are trained, giving approximately 394{,}754 trainable parameters out of
-$\sim$102\,M total.  Using a frozen encoder makes the model fast to train and
-avoids overfitting on the small task-specific dataset, but limits the
-backbone's ability to adapt its representations to the sentiment domain.
+The encoder is fully frozen; only the pooling and classification head are
+trained, giving 1{,}588{,}230 trainable parameters out of 103{,}855{,}878
+total.  Using a frozen encoder still keeps optimization cheap and stable, but
+the richer pooling head makes much better use of the pretrained sentence
+features than a raw \texttt{[CLS]} projection alone.
 
 \subsection{Advanced Task: Baseline and Modified Architecture}
 \label{sec:advanced}
@@ -194,8 +197,11 @@ backbone's ability to adapt its representations to the sentiment domain.
 For the advanced task we construct a \emph{matched frozen baseline} that
 shares the same backbone, optimiser schedule, hidden dimension (512), dropout
 (0.08), batch size (12), and random seed as the advanced model, but (i)~freezes
-all encoder parameters and (ii)~uses only the \texttt{[CLS]} token as the
-sentence representation.  This baseline has 394{,}754 trainable parameters.
+all encoder parameters and (ii)~uses final-layer pooling only, without layer
+mixing, max pooling, or encoder adaptation.  The baseline pools the frozen
+token embeddings through \texttt{[CLS]}, masked mean, learned attention, and a
+gated fusion of those views.  This baseline has 1{,}588{,}230 trainable
+parameters.
 
 \paragraph{Advanced BERT architecture.}
 The advanced classifier extends the baseline in five directions, each targeting
@@ -217,7 +223,9 @@ a known limitation of the frozen \texttt{[CLS]}-head design.
       \item masked mean pooling: stable average representation;
       \item learned attention pooling: task-driven weighted sum;
       \item masked max pooling: captures the most salient token per dimension,
-        useful for polarity-anchoring content words.
+    useful for polarity-anchoring content words.  Relative to the frozen
+    baseline, this adds the max-pooled channel on top of an already strong
+    \texttt{[CLS]} + mean + attention fusion head.
     \end{itemize}
 
   \item \textbf{Gated fusion.}  A learned gating network weights the four
@@ -254,10 +262,11 @@ Table~\ref{tab:arch-compare} summarises the architectural differences.
     Component & Frozen Baseline & Advanced BERT \\
     \midrule
     Encoder usage   & Final layer only, frozen & Learned mix of top-4 layers \\
-    Pooling         & \texttt{[CLS]} only       & \texttt{[CLS]} + mean + attn + max + gated fusion \\
+    Pooling         & \texttt{[CLS]} + mean + attn + gated fusion
+                    & \texttt{[CLS]} + mean + attn + max + gated fusion \\
     Adaptation      & None                      & LoRA (rank 24) + BitFit \\
-    Classifier head & 512-dim MLP on \texttt{[CLS]} & 512-dim MLP on fused representations \\
-    Trainable params & 394{,}754               & 3{,}565{,}835 \\
+    Classifier head & 512-dim MLP on fused representations & 512-dim MLP on richer fused representations \\
+    Trainable params & 1{,}588{,}230           & 3{,}565{,}835 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -357,7 +366,7 @@ run (selected by macro F1).
     Model & Acc. & Prec. & Recall & F1 & Macro F1 & Val.\ Loss \\
     \midrule
     BiLSTM (char-level)      & 0.9252 & 0.9505 & 0.9575 & 0.9540 & 0.8770 & 0.2596 \\
-    Frozen RoBERTa baseline  & 0.9172 & 0.9426 & 0.9560 & 0.9493 & 0.8622 & 0.2166 \\
+    Frozen RoBERTa baseline  & 0.9420 & 0.9728 & 0.9551 & 0.9639 & 0.9085 & 0.1711 \\
     Advanced BERT            & \textbf{0.9580} & \textbf{0.9738} & \textbf{0.9743}
                              & \textbf{0.9741} & \textbf{0.9317} & \textbf{0.1435} \\
     \bottomrule
@@ -367,13 +376,12 @@ run (selected by macro F1).
 Table~\ref{tab:results} reveals three clear findings.  First, the BiLSTM
 achieves a respectable 92.52\% accuracy and 0.8770 macro F1, demonstrating
 that character-level recurrent models can handle short Chinese reviews
-adequately.  Second, the frozen RoBERTa baseline performs slightly below the
-BiLSTM on accuracy (91.72\%) and macro F1 (0.8622), yet its validation loss is
-lower (0.2166 vs.\ 0.2596), suggesting better-calibrated predictions despite
-weaker raw classification.  Third, the advanced BERT achieves the strongest
-results across all six metrics, with accuracy 4.08 points above the frozen
-baseline and macro F1 improved by 0.0695---a gap that far exceeds typical
-run-to-run variance.
+adequately.  Second, the strengthened frozen RoBERTa baseline already
+outperforms the BiLSTM across all classification metrics, reaching 94.20\%
+accuracy and 0.9085 macro F1 with substantially lower validation loss
+(0.1711 vs.\ 0.2596).  Third, the advanced BERT still achieves the strongest
+results across all six metrics, improving on the frozen baseline by 1.60
+accuracy points and 0.0232 macro F1 while further reducing validation loss.
 
 \subsection{Advanced Task: Gain over Frozen Baseline}
 
@@ -391,25 +399,25 @@ model relative to the matched frozen baseline.
     \toprule
      & Acc. & Prec. & Recall & F1 & Macro F1 & Val.\ Loss \\
     \midrule
-    $\Delta$ & +0.0408 & +0.0312 & +0.0183 & +0.0248 & +0.0695 & $-$0.0731 \\
+    $\Delta$ & +0.0160 & +0.0010 & +0.0193 & +0.0102 & +0.0232 & $-$0.0276 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The largest relative improvement occurs on macro F1 (+0.0695), the metric most
+The largest relative improvement occurs on macro F1 (+0.0232), the metric most
 sensitive to minority-class behaviour.  This suggests that the multi-view
-pooling and encoder adaptation primarily help the model better identify negative
-sentiment examples---the harder, minority class.
+representation upgrade and encoder adaptation primarily help the model better
+identify negative sentiment examples---the harder, minority class.
 
 \subsection{Training Curves and Learning-Rate Schedules}
 
 Figure~\ref{fig:curves} shows the training and validation curves for the
-controlled frozen baseline and the advanced BERT.  The advanced model maintains
-a lower validation loss throughout training, and its validation macro F1 curve
-rises to a clearly higher plateau.  The frozen baseline peaks at step 2502
-(macro F1\,=\,0.8622), while the advanced model reaches its best checkpoint at
-step 2919 (macro F1\,=\,0.9317), indicating that the richer architecture
-continues to improve later into training.
+controlled frozen baseline and the advanced BERT.  The advanced model reaches a
+consistently higher macro F1 plateau and lower best-checkpoint loss.  The
+frozen baseline peaks at step 2085 (macro F1\,=\,0.9085), while the advanced
+model reaches its best checkpoint at step 2919 (macro F1\,=\,0.9317),
+indicating that the richer architecture still extracts additional value beyond
+the stronger frozen pooling head.
 
 \begin{figure}[ht]
   \centering
@@ -433,19 +441,20 @@ catastrophic forgetting.
 \begin{figure}[ht]
   \centering
   \includegraphics[width=\textwidth]{bert_learning_rate_schedules.pdf}
-  \caption{Learning-rate schedules.  \textbf{Orange solid}: adapter and
-    classification-head LR for the advanced BERT.
+  \caption{Learning-rate schedules.  \textbf{Blue dashed}: main LR for the
+    frozen baseline.
+    \textbf{Orange solid}: adapter and classification-head LR for the advanced BERT.
     \textbf{Green dashed}: encoder LR for the advanced BERT, held lower to
-    protect pretrained representations.
-    The baseline main LR follows the same schedule as the adapter LR and is
-    not drawn separately.}
+    protect pretrained representations.  The baseline and advanced adapter
+    schedules are identical, so the dashed baseline trace is intentionally
+    styled to remain visible on top of the solid orange line.}
   \label{fig:lr}
 \end{figure}
 
 Figure~\ref{fig:summary} presents a compact bar-chart comparison of accuracy,
 macro F1, and validation loss at the best checkpoint of each model.  The
 $\Delta$ annotations (green) confirm consistent improvement across all metrics,
-with the largest relative gain on macro F1 ($+0.0695$).
+with the largest relative gain on macro F1 ($+0.0232$).
 
 \begin{figure}[ht]
   \centering
@@ -459,18 +468,18 @@ with the largest relative gain on macro F1 ($+0.0695$).
 \end{figure}
 
 Figure~\ref{fig:params} contextualises parameter efficiency across all three
-models.  Despite sharing a $\sim$102\,M-parameter backbone, the advanced model
-activates only 3.57\,M trainable parameters via LoRA and BitFit---9$\times$
-more than the frozen baseline's 395\,K, yet still a small fraction of the cost
-of full fine-tuning.
+models.  Despite sharing a $\sim$104--106\,M-parameter backbone, the advanced
+model activates only 3.57\,M trainable parameters via LoRA and BitFit---about
+2.2$\times$ more than the frozen baseline's 1.59\,M, yet still a small
+fraction of the cost of full fine-tuning.
 
 \begin{figure}[ht]
   \centering
   \includegraphics[width=\textwidth]{param_comparison.pdf}
   \caption{Total (gray) vs.\ trainable (blue) parameter counts for each model.
     The BiLSTM is fully trainable but tiny ($\approx$261\,K).
-    Both BERT-based models share a $\sim$102\,M-parameter backbone;
-    the advanced model activates 9$\times$ more trainable parameters than the
+    Both BERT-based models share a $\sim$104--106\,M-parameter backbone;
+    the advanced model activates about 2.2$\times$ more trainable parameters than the
     frozen baseline by injecting LoRA adapters and enabling BitFit, while
     keeping the vast majority of the pretrained encoder frozen.}
   \label{fig:params}
@@ -482,20 +491,20 @@ of full fine-tuning.
 
 \subsection{Comparison of the Basic Models}
 
-The most striking result from the basic-task comparison is that the character-level
-BiLSTM \emph{outperforms} the frozen RoBERTa baseline on accuracy and macro F1
-despite having only 0.25\% as many parameters.  This outcome is not entirely
-surprising given the task context.  The frozen baseline extracts only the \texttt{[CLS]} token and projects it to a
-decision boundary, but the classification head receives no gradient signal from
-the encoder---the pretrained representations are static.  By contrast, the BiLSTM
-is fully trainable end-to-end, so every parameter is optimised directly for the
-binary sentiment objective.
+The most striking result from the basic-task comparison is that the strengthened
+frozen RoBERTa baseline now \emph{outperforms} the character-level BiLSTM on
+accuracy, F1, macro F1, and validation loss despite keeping the pretrained
+encoder entirely fixed.  This indicates that the earlier weakness of the frozen
+Transformer was not due to frozen representations alone, but to an
+underpowered pooling head.  Once the baseline aggregates \texttt{[CLS]}, mean,
+and attention-pooled views with a small gate, the pretrained encoder provides a
+clear advantage over the recurrent model on this dataset.
 
-We note, however, that the frozen baseline achieves lower validation loss
-(0.2166 vs.\ 0.2596), suggesting more calibrated predictions even when its
-discrete metrics are slightly lower.  This discrepancy is consistent with the
-hypothesis that the RoBERTa representations contain richer latent information
-than the frozen-head design can fully exploit.
+The BiLSTM remains competitive: it reaches 0.8770 macro F1 with only
+260\,K parameters and full end-to-end optimization.  That makes it a strong
+lightweight baseline.  However, the RoBERTa model benefits from large-scale
+pretraining and a richer sentence representation, which together outweigh the
+BiLSTM's end-to-end trainability on this task.
 
 Regarding convergence behaviour, the BiLSTM is trained for 15 epochs with a
 1{,}000$\times$ larger learning rate and converges stably within that budget,
@@ -507,21 +516,21 @@ metric values.
 \subsection{Effect of the Architectural Modification}
 
 Under the matched controlled protocol the advanced BERT improves macro F1 by
-0.0695---a gain that is substantially larger than typical per-seed variance for
-this class of model.  We attribute this improvement to three complementary
-mechanisms.
+0.0232 over an already strong frozen baseline.  Because that baseline already
+includes gated \texttt{[CLS]} + mean + attention pooling, the remaining gain is
+more focused and interpretable than before.  We attribute it to three
+complementary mechanisms.
 
 \textbf{Layer mixing.}  Different encoder layers encode different linguistic
 abstractions \citep{tenney2019bert}.  By taking a weighted mixture of the top 4
 layers the advanced model can simultaneously use shallow syntactic signals and
 deep semantic compositionality, both of which are relevant for sentiment.
 
-\textbf{Multi-view pooling.}  A single pooling strategy inevitably discards
-information.  Mean pooling smooths over polarity-bearing tokens; max pooling
-suppresses them in favour of a single extreme activating unit.  By combining
-four complementary views---\texttt{[CLS]}, mean, attention, and max---and
-learning to gate them per example, the model obtains a more complete sentence
-representation.
+\textbf{Richer multi-view pooling.}  The baseline already fuses
+\texttt{[CLS]}, mean, and attention pooling, so the advanced model's remaining
+pooling gain comes from adding the max-pooled channel on top of those views.
+This helps preserve polarity-bearing tokens that can otherwise be diluted by
+average-based summaries.
 
 \textbf{LoRA and BitFit adaptation.}  The pretrained encoder was optimised for
 a masked-language-modelling objective on a broad web corpus, not for binary
@@ -533,7 +542,7 @@ this interpretation: domain adaptation helps the model activate features specifi
 to the less frequent class.
 
 It is important to note that the advanced architecture bundles several
-modifications together, so we cannot attribute the full $+0.0695$ gain to any
+modifications together, so we cannot attribute the full $+0.0232$ gain to any
 single component.  A full per-component ablation remains future work.
 
 \subsection{Limitations}
@@ -554,18 +563,20 @@ restricted to one dataset, limiting the generalisability of the conclusions.
 
 We presented an empirical evaluation of three sentiment classifiers on a
 Chinese binary review dataset.  The BiLSTM provides a competitive character-level
-baseline with strong macro F1 (0.8770) under fully supervised training.  The
-frozen RoBERTa baseline demonstrates that pretrained representations alone are
-not sufficient without end-to-end adaptation.  Most importantly, the advanced
-BERT classifier---which combines layer mixing, gated multi-view pooling, and
-parameter-efficient LoRA and BitFit adaptation---achieves validation macro F1
-of 0.9317 and accuracy of 95.80\%, substantially outperforming the matched
-frozen baseline under identical non-architectural conditions.
+baseline with strong macro F1 (0.8770) under fully supervised training.  A
+strengthened frozen RoBERTa baseline with gated multi-view pooling already
+reaches 0.9085 macro F1 and 94.20\% accuracy, showing that frozen pretrained
+representations can be highly effective when pooled well.  Most importantly,
+the advanced BERT classifier---which combines layer mixing, max-augmented
+pooling, and parameter-efficient LoRA and BitFit adaptation---achieves
+validation macro F1 of 0.9317 and accuracy of 95.80\%, outperforming the
+matched frozen baseline under identical non-architectural conditions.
 
 The key lesson is that \emph{how} encoder features are aggregated and
 \emph{where} adaptation is permitted inside a pretrained network both matter
-substantially.  A naive frozen-head design leaves significant performance on the
-table, even when the backbone carries rich linguistic knowledge.
+substantially.  Better frozen-head pooling closes much of the gap, but
+layer mixing and lightweight encoder adaptation still provide a meaningful final
+gain.
 
 Future work should systematically ablate each advanced component to quantify
 individual contributions; evaluate robustness across multiple random seeds;
@@ -601,7 +612,9 @@ tensorboard --logdir ./runs
 The most relevant event files are
 \begin{itemize}
   \item \texttt{runs/bert\_classifier/bert\_classifier\_20260331-220647}
-    (controlled frozen baseline, best at step 2502, macro F1 = 0.8622)
+    (older frozen baseline run, retained for reference)
+  \item \texttt{runs/bert\_classifier/bert\_classifier\_20260408-222445}
+    (updated frozen baseline, best at step 2085, macro F1 = 0.9085)
   \item \texttt{runs/bert\_classifier\_advanced/bert\_classifier\_advanced\_20260331-025421}
     (advanced BERT reproduced run, best at step 2919, macro F1 = 0.9317)
 \end{itemize}

@@ -199,6 +199,10 @@ def test_bert_classifier_uses_two_layer_mlp_head() -> None:
 
     assert isinstance(model, BertClassifier)
     assert isinstance(model.projection, torch.nn.Sequential)
+    assert isinstance(model.feature_norm, torch.nn.LayerNorm)
+    assert isinstance(model.attention_pooler, torch.nn.Linear)
+    assert isinstance(model.pool_gate, torch.nn.Linear)
+    assert model.projection[0].in_features == 48
     assert isinstance(model.classifier, torch.nn.Linear)
     assert model.classifier.in_features == 512
     assert model.classifier.out_features == 2
@@ -277,6 +281,61 @@ def test_bert_classifier_can_freeze_encoder_and_use_cls_pooling() -> None:
 
     assert torch.allclose(cls_features, torch.tensor([[10.0] * 12]))
     assert logits.shape == (1, 2)
+
+
+def test_bert_classifier_attention_pool_defaults_to_masked_uniform_average() -> None:
+    model = BertClassifier(
+        pretrained_model_name="hfl/chinese-roberta-wwm-ext",
+        num_classes=2,
+        classifier_hidden_dim=12,
+        dropout=0.0,
+    )
+    token_embeddings = torch.tensor(
+        [
+            [
+                [1.0] * 12,
+                [3.0] * 12,
+                [5.0] * 12,
+                [99.0] * 12,
+            ]
+        ]
+    )
+    attention_mask = torch.tensor([[1, 1, 1, 0]], dtype=torch.long)
+
+    pooled_output = model.attention_pool(
+        token_embeddings=token_embeddings,
+        attention_mask=attention_mask,
+    )
+
+    assert torch.allclose(pooled_output, torch.tensor([[3.0] * 12]))
+
+
+def test_bert_classifier_fuses_anchor_complement_and_attention_views() -> None:
+    model = BertClassifier(
+        pretrained_model_name="hfl/chinese-roberta-wwm-ext",
+        num_classes=2,
+        classifier_hidden_dim=12,
+        dropout=0.0,
+        pooling_strategy="cls",
+    )
+    token_embeddings = torch.tensor(
+        [
+            [
+                [1.0] * 12,
+                [3.0] * 12,
+                [5.0] * 12,
+                [99.0] * 12,
+            ]
+        ]
+    )
+    attention_mask = torch.tensor([[1, 1, 1, 0]], dtype=torch.long)
+
+    pooled_features = model.pool_features(
+        token_embeddings=token_embeddings,
+        attention_mask=attention_mask,
+    )
+
+    assert pooled_features.shape == (1, 48)
 
 
 def test_build_text_classifier_can_construct_advanced_bert_variant() -> None:

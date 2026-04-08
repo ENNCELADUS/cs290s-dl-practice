@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch
 from tensorboard.backend.event_processing import event_accumulator
@@ -51,20 +52,26 @@ class RunSpec:
     color_light: str
 
 
+def _latest_run_dir(parent: Path) -> Path:
+    """Return the most recently modified run directory under *parent*."""
+    run_dirs = [path for path in parent.iterdir() if path.is_dir()]
+    if not run_dirs:
+        raise FileNotFoundError(f"No run directories found in {parent}")
+    return max(run_dirs, key=lambda path: path.stat().st_mtime)
+
+
 RUNS: dict[str, RunSpec] = {
     "matched": RunSpec(
         key="matched",
         label="Controlled Frozen Baseline",
-        run_dir=PROJECT_ROOT
-        / "runs/bert_classifier/bert_classifier_20260331-220647",
+        run_dir=_latest_run_dir(PROJECT_ROOT / "runs/bert_classifier"),
         color=PALETTE["blue"],
         color_light=PALETTE["blue_light"],
     ),
     "advanced": RunSpec(
         key="advanced",
         label="Advanced BERT",
-        run_dir=PROJECT_ROOT
-        / "runs/bert_classifier_advanced/bert_classifier_advanced_20260331-025421",
+        run_dir=_latest_run_dir(PROJECT_ROOT / "runs/bert_classifier_advanced"),
         color=PALETTE["orange"],
         color_light=PALETTE["orange_light"],
     ),
@@ -177,6 +184,18 @@ def ema(values: np.ndarray, alpha: float = 0.1) -> np.ndarray:
     for i in range(1, values.size):
         out[i] = alpha * values[i] + (1.0 - alpha) * out[i - 1]
     return out
+
+
+def load_checkpoint_metrics(experiment_name: str) -> dict[str, float]:
+    """Load best-checkpoint metrics for one experiment."""
+    checkpoint_path = (
+        PROJECT_ROOT / "checkpoints" / experiment_name / "best_model.pt"
+    )
+    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    return {
+        key: float(value)
+        for key, value in checkpoint["metrics"].items()
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -422,10 +441,21 @@ def export_learning_rates(
 
 def export_summary_bar_chart() -> list[Path]:
     """Export a publication-ready grouped bar chart of headline metrics."""
+    baseline_metrics = load_checkpoint_metrics("bert_classifier")
+    advanced_metrics = load_checkpoint_metrics("bert_classifier_advanced")
+
     # fmt: off
     metrics      = ["Accuracy",    "Macro F1",           "Validation Loss"]
-    baseline_vals = np.array([0.9172, 0.8622482836934710, 0.2165958963423967])
-    advanced_vals = np.array([0.9580, 0.9317188460406945, 0.1435029626011848])
+    baseline_vals = np.array([
+        baseline_metrics["accuracy"],
+        baseline_metrics["macro_f1"],
+        baseline_metrics["loss"],
+    ])
+    advanced_vals = np.array([
+        advanced_metrics["accuracy"],
+        advanced_metrics["macro_f1"],
+        advanced_metrics["loss"],
+    ])
     higher_better = [True, True, False]   # direction of improvement
     # fmt: on
 
@@ -512,8 +542,8 @@ def export_summary_bar_chart() -> list[Path]:
 def export_param_comparison() -> list[Path]:
     """Export a compact horizontal bar chart of trainable vs. total parameters."""
     models = ["BiLSTM", "Frozen Baseline\n(RoBERTa)", "Advanced BERT\n(RoBERTa + LoRA)"]
-    total_params = np.array([260_546, 102_465_026, 105_730_571], dtype=float)
-    trainable_params = np.array([260_546, 394_754, 3_565_835], dtype=float)
+    total_params = np.array([260_546, 103_855_878, 105_730_571], dtype=float)
+    trainable_params = np.array([260_546, 1_588_230, 3_565_835], dtype=float)
 
     fig, ax = plt.subplots(figsize=(8.5, 3.2), constrained_layout=True)
     y = np.arange(len(models))

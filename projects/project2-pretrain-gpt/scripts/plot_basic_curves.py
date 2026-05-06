@@ -25,10 +25,10 @@ def read_scalar_series(run_dir: Path, tag: str) -> list[tuple[int, float]]:
     return sorted(series.items())
 
 
-def plot_loss_curves(output_path: Path) -> None:
+def plot_loss_curves(runs: dict[str, Path], output_path: Path) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(11, 4), constrained_layout=True)
 
-    for name, run_dir in RUNS.items():
+    for name, run_dir in runs.items():
         train_loss = read_scalar_series(run_dir, "train_loss")
         val_loss = read_scalar_series(run_dir, "val_loss")
         axes[0].plot(
@@ -62,10 +62,10 @@ def plot_loss_curves(output_path: Path) -> None:
     plt.close(fig)
 
 
-def plot_perplexity_curves(output_path: Path) -> None:
+def plot_perplexity_curves(runs: dict[str, Path], output_path: Path) -> None:
     fig, axis = plt.subplots(figsize=(7, 4), constrained_layout=True)
 
-    for name, run_dir in RUNS.items():
+    for name, run_dir in runs.items():
         perplexity = read_scalar_series(run_dir, "val_perplexity")
         axis.plot(
             [step for step, _ in perplexity],
@@ -88,8 +88,8 @@ def plot_perplexity_curves(output_path: Path) -> None:
 def main() -> None:
     output_dir = Path("figures")
     output_dir.mkdir(parents=True, exist_ok=True)
-    plot_loss_curves(output_dir / "basic_loss_curves.png")
-    plot_perplexity_curves(output_dir / "basic_perplexity_curves.png")
+    plot_loss_curves(RUNS, output_dir / "basic_loss_curves.png")
+    plot_perplexity_curves(RUNS, output_dir / "basic_perplexity_curves.png")
 
 
 if __name__ == "__main__":

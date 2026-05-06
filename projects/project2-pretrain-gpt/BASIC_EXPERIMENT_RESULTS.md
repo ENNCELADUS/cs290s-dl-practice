@@ -36,12 +36,11 @@ classes, `transformers.Trainer`, or `torch.nn.Transformer*` layers are used.
 
 ## 4. Training Setup
 
-Training is controlled by Hugging Face Accelerate. The `tiny` and `small` runs used
-2 visible GPUs with the `gloo` distributed backend because the allocated node had
-unhealthy GPUs filtered out by the launcher. The `medium` run used 4 visible GPUs with
-NCCL. All runs used fp16 mixed precision, AdamW, cosine learning-rate scheduling with
-warmup, gradient clipping, TensorBoard logging, checkpointing every 1,000 steps, and
-sample generation every 200 validation steps.
+Training is controlled by Hugging Face Accelerate. The final archived comparison uses
+4 visible GPUs with NCCL for all three model sizes. All runs used fp16 mixed precision,
+AdamW, cosine learning-rate scheduling with warmup, gradient clipping, TensorBoard
+logging, checkpointing every 1,000 steps, and sample generation every 200 validation
+steps.
 
 | Setting | Value |
 |---|---:|
@@ -63,8 +62,9 @@ sample generation every 200 validation steps.
 
 ### Training Curves
 
-The TensorBoard event logs were copied from the HPC into `hpc_logs/` and plotted with
-`matplotlib` using `scripts/plot_basic_curves.py`.
+The TensorBoard event logs were copied from the HPC into `hpc_logs/` and plotted
+with `matplotlib` using `scripts/plot_basic_curves.py`. The `medium` logs are reused
+from the earlier 4-GPU run.
 
 ![Training and validation loss curves](figures/basic_loss_curves.png)
 
@@ -74,28 +74,28 @@ The TensorBoard event logs were copied from the HPC into `hpc_logs/` and plotted
 
 | Model | Slurm job | GPUs/backend | Train tokens | Runtime | Tokens/sec | Peak allocated memory | Val loss | Val perplexity |
 |---|---:|---|---:|---:|---:|---:|---:|---:|
-| tiny | 907478 | 2 / gloo | 65.54M | 8.94 min | 122,124 | 3.79 GiB | 2.419 | 11.24 |
-| small | 907489 | 2 / gloo | 65.54M | 15.95 min | 68,472 | 4.91 GiB | 2.188 | 8.92 |
+| tiny | 907715 | 4 / NCCL | 131.07M | 7.97 min | 274,182 | 3.79 GiB | 2.270 | 9.68 |
+| small | 907707 | 4 / NCCL | 131.07M | 15.20 min | 143,745 | 4.92 GiB | 2.048 | 7.75 |
 | medium | 907490 | 4 / NCCL | 131.07M | 26.65 min | 81,969 | 6.64 GiB | 2.108 | 8.23 |
 
-The `medium` run reached the best final validation perplexity, but it processed twice
-as many total tokens because it ran with 4 GPUs while `tiny` and `small` ran with 2.
-The cleanest equal-token comparison is therefore `tiny` vs. `small`.
+After rerunning `tiny` and `small` on 4 GPUs, all three models use the same total token
+budget. The `small` model reaches the best final validation perplexity, while `medium`
+has lower final training loss but slightly worse validation loss.
 
 ### Validation Curves
 
 | Step | tiny loss | tiny PPL | small loss | small PPL | medium loss | medium PPL |
 |---:|---:|---:|---:|---:|---:|---:|
-| 200 | 3.774 | 43.54 | 3.750 | 42.51 | 4.108 | 60.84 |
-| 400 | 3.182 | 24.10 | 3.036 | 20.83 | 3.776 | 43.65 |
-| 600 | 2.907 | 18.31 | 2.693 | 14.78 | 3.726 | 41.50 |
-| 800 | 2.789 | 16.26 | 2.549 | 12.80 | 3.503 | 33.22 |
-| 1000 | 2.765 | 15.88 | 2.517 | 12.39 | 2.990 | 19.88 |
-| 1200 | 2.756 | 15.74 | 2.506 | 12.25 | 2.518 | 12.40 |
-| 1400 | 2.704 | 14.94 | 2.460 | 11.71 | 2.307 | 10.05 |
-| 1600 | 2.613 | 13.65 | 2.377 | 10.77 | 2.288 | 9.85 |
-| 1800 | 2.516 | 12.38 | 2.278 | 9.76 | 2.233 | 9.32 |
-| 2000 | 2.419 | 11.24 | 2.188 | 8.92 | 2.108 | 8.23 |
+| 200 | 3.670 | 39.26 | 3.915 | 50.15 | 4.108 | 60.84 |
+| 400 | 3.236 | 25.42 | 3.406 | 30.14 | 3.776 | 43.65 |
+| 600 | 3.193 | 24.35 | 3.333 | 28.01 | 3.726 | 41.50 |
+| 800 | 2.962 | 19.34 | 2.995 | 19.99 | 3.503 | 33.22 |
+| 1000 | 2.662 | 14.33 | 2.559 | 12.92 | 2.990 | 19.88 |
+| 1200 | 2.450 | 11.59 | 2.268 | 9.66 | 2.518 | 12.40 |
+| 1400 | 2.352 | 10.51 | 2.137 | 8.48 | 2.307 | 10.05 |
+| 1600 | 2.344 | 10.42 | 2.127 | 8.39 | 2.288 | 9.85 |
+| 1800 | 2.325 | 10.23 | 2.114 | 8.28 | 2.233 | 9.32 |
+| 2000 | 2.270 | 9.68 | 2.048 | 7.75 | 2.108 | 8.23 |
 
 ### Generated Samples
 
@@ -104,16 +104,17 @@ under `outputs/<model>/samples/step_2000_sample_*.txt` on the HPC.
 
 | Model | Sample | Excerpt |
 |---|---:|---|
-| tiny | 1 | A little girl named Lily plays outside with her mom, then asks to play hide and seek near the swings. |
-| tiny | 2 | Lily repeatedly plays with toys, goes to a store, and finds an old doll; the story restarts partway through. |
-| tiny | 3 | Lily sees a big dog in the park, but the dialogue becomes inconsistent and the moral ending is weak. |
-| small | 1 | Billy and Timmy appear in a simple family story about going to the post office and buying things. |
-| small | 2 | Lily plays in the park, talks with her mother, and begins counting, though some object references are unclear. |
-| small | 3 | Lily and her mother discuss buying something; the story is coherent at sentence level but repeats money/buying. |
+| tiny | 1 | A family goes on a trip and arrives at an airport; the setup is coherent but the destination/action drifts. |
+| tiny | 2 | Sue plays in the snow and finds a melting snowman; the sample keeps a child-story tone but has awkward logic. |
+| tiny | 3 | Lily explores the woods and finds a tree with an axe; the scene is imaginative but object references are confused. |
+| small | 1 | Lily goes to the park with her mother, sees swings, slides, and a butterfly; the story is locally coherent. |
+| small | 2 | Lily finds a shiny magic chain and reacts to it; the prose is fluent but the chain's role remains unclear. |
+| small | 3 | Lily finds a shiny gem in the garden and hears a noise; the story has a clearer event sequence than `tiny`. |
 | medium | 1 | Lily sees a butterfly and a cricket in the park; the prose is fluent but the cricket interaction is semantically odd. |
 | medium | 2 | Timmy breaks a toy car after spilling it in his room; the story has clearer event progression but imperfect causality. |
 | medium | 3 | Lily plays with friends near a swing until it rains; the style matches TinyStories but some phrases remain awkward. |
 
-Overall, larger models reduce validation perplexity and improve local fluency. The
-`small` model gives the strongest equal-token improvement over `tiny`; `medium` is the
-best absolute run but should be reported with the token-budget caveat above.
+Overall, increasing from `tiny` to `small` improves validation perplexity clearly under
+the same token budget. Increasing further to `medium` does not improve validation
+perplexity in this run, suggesting diminishing returns or mild overfitting/optimization
+mismatch on the current 100,000-example TinyStories subset.

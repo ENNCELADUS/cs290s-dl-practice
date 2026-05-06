@@ -3,6 +3,7 @@
 #   sbatch scripts/run_hpc.sh tiny
 #   sbatch scripts/run_hpc.sh small
 #   sbatch scripts/run_hpc.sh medium
+#   sbatch scripts/run_hpc.sh configs/experiments/diagnostics/medium_lr_6e4.yaml
 #SBATCH -J cs290s-project2
 #SBATCH -p critical
 #SBATCH -A hexm-critical
@@ -19,16 +20,19 @@
 
 set -euo pipefail
 
-MODEL_SIZE="${1:-tiny}"
-case "${MODEL_SIZE}" in
+RUN_TARGET="${1:-tiny}"
+case "${RUN_TARGET}" in
     tiny|small|medium)
-        EXPERIMENT_CONFIG="configs/experiments/${MODEL_SIZE}.yaml"
+        EXPERIMENT_CONFIG="configs/experiments/${RUN_TARGET}.yaml"
         ;;
     smoke)
         EXPERIMENT_CONFIG="configs/experiments/smoke.yaml"
         ;;
+    *.yaml|*.yml)
+        EXPERIMENT_CONFIG="${RUN_TARGET}"
+        ;;
     *)
-        echo "Usage: sbatch scripts/run_hpc.sh {smoke|tiny|small|medium}" >&2
+        echo "Usage: sbatch scripts/run_hpc.sh {smoke|tiny|small|medium|path/to/config.yaml}" >&2
         exit 2
         ;;
 esac

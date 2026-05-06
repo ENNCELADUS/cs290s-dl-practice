@@ -1,3 +1,0 @@
-CUDA_VISIBLE_DEVICES=0,1,2,3
-Launching Accelerate with 4 process(es).
-NCCL version 2.20.5+cuda12.4

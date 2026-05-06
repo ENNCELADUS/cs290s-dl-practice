@@ -1,0 +1,11 @@
+{
+  "cuda_max_memory_allocated_gib": 4.91886043548584,
+  "cuda_max_memory_reserved_gib": 5.31640625,
+  "cuda_mean_memory_allocated_gib": 4.91776180267334,
+  "cuda_mean_memory_reserved_gib": 5.31640625,
+  "train_runtime_seconds": 911.8354624188505,
+  "train_tokens": 131072000.0,
+  "train_tokens_per_second": 143745.23189995458,
+  "val_loss": 2.0476129055023193,
+  "val_perplexity": 7.749380506323074
+}

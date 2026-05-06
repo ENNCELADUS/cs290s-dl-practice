@@ -97,6 +97,30 @@ has lower final training loss but slightly worse validation loss.
 | 1800 | 2.325 | 10.23 | 2.114 | 8.28 | 2.233 | 9.32 |
 | 2000 | 2.270 | 9.68 | 2.048 | 7.75 | 2.108 | 8.23 |
 
+### Medium Hyperparameter Diagnostics
+
+Because the baseline `medium` model had lower train loss than `small` but worse
+validation perplexity, four controlled medium-only diagnostics were run with the same
+model, data split, seed, 4-GPU setup, and 131.07M-token budget. Each run changed only
+one training hyperparameter.
+
+![Medium diagnostic validation curves](figures/medium_diagnostic_curves.png)
+
+| Run | Job | Change | Final train loss | Final val loss | Final PPL |
+|---|---:|---|---:|---:|---:|
+| small baseline | 907707 | 33.69M params | 2.132 | 2.048 | 7.75 |
+| medium baseline | 907490 | LR 8e-4, warmup 2%, wd 0.1 | 2.075 | 2.108 | 8.23 |
+| medium lr 6e-4 | 907722 | lower LR | 2.035 | 2.075 | 7.96 |
+| medium lr 4e-4 | 907723 | lower LR | 2.022 | 2.057 | 7.82 |
+| medium warmup 5% | 907724 | longer warmup | 2.002 | 2.033 | 7.64 |
+| medium wd 0.2 | 907725 | stronger weight decay | 2.112 | 2.147 | 8.56 |
+
+The diagnostics suggest that the original `medium` underperformance was mainly an
+optimization-schedule issue. Lowering LR improved perplexity, and increasing warmup
+from 2% to 5% produced the best result, beating the `small` baseline. Stronger weight
+decay hurt, so simple over-regularization does not explain the gap. The `medium_lr_4e4`
+run was much slower on `ai_gpu33`, so its runtime is not directly comparable.
+
 ### Generated Samples
 
 All samples below use the same prompt: `Once upon a time`. Full text files are stored
@@ -115,6 +139,7 @@ under `outputs/<model>/samples/step_2000_sample_*.txt` on the HPC.
 | medium | 3 | Lily plays with friends near a swing until it rains; the style matches TinyStories but some phrases remain awkward. |
 
 Overall, increasing from `tiny` to `small` improves validation perplexity clearly under
-the same token budget. Increasing further to `medium` does not improve validation
-perplexity in this run, suggesting diminishing returns or mild overfitting/optimization
-mismatch on the current 100,000-example TinyStories subset.
+the same token budget. The untuned `medium` initially underperformed `small`, but the
+diagnostic runs show that a longer warmup lets `medium` reach the best validation
+perplexity. This suggests larger models can help on this subset, but they are more
+sensitive to optimization hyperparameters.

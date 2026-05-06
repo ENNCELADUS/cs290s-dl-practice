@@ -1,0 +1,17 @@
+seed: 42
+output_dir: outputs/kv_cache/medium
+benchmark_output_dir: outputs/kv_cache/medium
+checkpoint: outputs/diagnostics/medium_warmup_5pct/checkpoint-2000/model.pt
+model_config: configs/models/medium.json
+tokenizer_name_or_path: roneneldan/TinyStories-33M
+tokenizer_local_files_only: true
+benchmark_prompts:
+  - "Once upon a time"
+  - "Lily found a tiny red door under the old tree"
+  - "Tom wanted to help his friend learn how to share"
+sample_max_new_tokens: 120
+sample_temperature: 0.9
+sample_top_k: 50
+sample_top_p: 0.95
+benchmark_warmup_iters: 3
+benchmark_measure_iters: 5

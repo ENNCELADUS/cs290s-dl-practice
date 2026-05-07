@@ -2,8 +2,8 @@
 
 This note archives the completed TinyStories GPT size-comparison runs on the HPC:
 the required `tiny`, `small`, and `medium` ladder plus one larger follow-up run. It
-follows Sections 2-5 of the Project 2 report requirements and intentionally omits
-the Introduction, Discussion, Conclusion, and Advanced Task sections.
+follows Sections 2-5 of the Project 2 report requirements and includes the KV cache
+benchmark result; it intentionally omits the Introduction, Discussion, and Conclusion.
 
 ## 2. Dataset & Preprocessing
 
@@ -143,6 +143,23 @@ under `outputs/<model>/samples/step_2000_sample_*.txt` on the HPC.
 | large | 1 | Lily receives a box of powder and argues with her brother; the prose is fluent but the object use becomes repetitive and the sample ends mid-sentence. |
 | large | 2 | Lily meets Sam, shares a red ball, and they play together; this is the most coherent large sample, with a clear friendly-story arc. |
 | large | 3 | Lily finds a pile of leaves that turns into fire; the sample keeps a TinyStories tone but has a semantic inconsistency around playing with fire. |
+
+### KV Cache Benchmark
+
+Task B was evaluated on the largest trained model, `large`, using checkpoint
+`outputs/large/checkpoint-2000/model.pt`. The benchmark used one GPU, the same three
+prompts for both modes, and identical sampling settings: `max_new_tokens=512`,
+temperature `0.9`, top-k `50`, and top-p `0.95`. Each mode used 3 warmup iterations
+and 5 measured iterations.
+
+| Mode | Slurm job | New tokens | Total time | Seconds/token | Tokens/sec | Peak CUDA memory |
+|---|---:|---:|---:|---:|---:|---:|
+| no cache | 907846 | 7,680 | 102.590 s | 0.01336 | 74.86 | 0.774 GiB |
+| KV cache | 907846 | 7,680 | 77.241 s | 0.01006 | 99.43 | 0.690 GiB |
+
+KV caching gives a 1.33x throughput improvement and reduces total generation time by
+24.7% for this 512-token setting. The generated samples match between modes under the
+fixed seed, so the benchmark isolates inference-time reuse of cached keys and values.
 
 Overall, increasing from `tiny` to `small` improves validation perplexity clearly under
 the same token budget. The untuned `medium` initially underperformed `small`, but the

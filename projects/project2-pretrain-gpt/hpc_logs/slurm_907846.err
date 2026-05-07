@@ -1,3 +1,3 @@
 /public/home/wangar2023/.conda/envs/vcc/lib/python3.11/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
   warnings.warn(
-2026-05-07 03:10:07,834 | INFO | __main__ | Wrote outputs/kv_cache/medium/kv_cache_benchmark.json and outputs/kv_cache/medium/kv_cache_benchmark.md
+2026-05-07 15:33:28,969 | INFO | __main__ | Wrote outputs/kv_cache/large/kv_cache_benchmark.json and outputs/kv_cache/large/kv_cache_benchmark.md

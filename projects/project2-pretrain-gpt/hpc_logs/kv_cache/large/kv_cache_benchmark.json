@@ -1,0 +1,290 @@
+{
+  "checkpoint": "outputs/large/checkpoint-2000/model.pt",
+  "device": "cuda",
+  "generation_settings": {
+    "max_new_tokens": 512,
+    "measure_iters": 5,
+    "seed": 42,
+    "temperature": 0.9,
+    "top_k": 50,
+    "top_p": 0.95,
+    "warmup_iters": 3
+  },
+  "modes": [
+    {
+      "mode": "no_cache",
+      "peak_cuda_memory_gib": 0.7744836807250977,
+      "runs": [
+        {
+          "elapsed_seconds": 6.746759119909257,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744793891906738,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.013177263906072767,
+          "tokens_per_second": 75.88828812475616
+        },
+        {
+          "elapsed_seconds": 6.837257691659033,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.01335401892902155,
+          "tokens_per_second": 74.88382376235482
+        },
+        {
+          "elapsed_seconds": 6.812665157020092,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.013305986634804867,
+          "tokens_per_second": 75.15414132344534
+        },
+        {
+          "elapsed_seconds": 6.767046362161636,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.013216887426096946,
+          "tokens_per_second": 75.66077910488099
+        },
+        {
+          "elapsed_seconds": 6.838846703991294,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.013357122468732996,
+          "tokens_per_second": 74.86642443691362
+        },
+        {
+          "elapsed_seconds": 6.834253188688308,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.013348150759156852,
+          "tokens_per_second": 74.91674450215498
+        },
+        {
+          "elapsed_seconds": 6.779049793258309,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.013240331627457635,
+          "tokens_per_second": 75.52680915681994
+        },
+        {
+          "elapsed_seconds": 6.854332164861262,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.013387367509494652,
+          "tokens_per_second": 74.69728453265927
+        },
+        {
+          "elapsed_seconds": 6.867123190779239,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.013412349981990701,
+          "tokens_per_second": 74.55814986506765
+        },
+        {
+          "elapsed_seconds": 6.810306012164801,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.013301378930009378,
+          "tokens_per_second": 75.18017532331852
+        },
+        {
+          "elapsed_seconds": 6.882842309772968,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.013443051386275329,
+          "tokens_per_second": 74.38787305543957
+        },
+        {
+          "elapsed_seconds": 6.866305684205145,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.013410753289463173,
+          "tokens_per_second": 74.56702680420644
+        },
+        {
+          "elapsed_seconds": 6.8508609612472355,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.013380587814936007,
+          "tokens_per_second": 74.73513225508341
+        },
+        {
+          "elapsed_seconds": 6.899348488077521,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.013475290015776409,
+          "tokens_per_second": 74.20990559974844
+        },
+        {
+          "elapsed_seconds": 6.942993301898241,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.7744836807250977,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.013560533792770002,
+          "tokens_per_second": 73.74340975671362
+        }
+      ],
+      "samples": [
+        "Once upon a time, there was a little girl named Lily. She loved to paint and paint. One day, she drew a big yellow picture with bright blue and purple crayon. But then, she had a selfish idea. She wanted to draw a pretty picture for her mommy.\n\nLily tried to find her blue crayon, but she couldn't find it. Her mommy saw her and said, \"No, Lily! Your crayon is not for looking, it's mine. You cannot find it, you won't know it.\"\n\nLily was sad and went home. She learned that it's not fair to ask for help when she needs it.Once upon a time, there was a little girl named Lily. She had a pet cat named Mittens. Mittens was very adorable and always gave her a lot of love.\n\nOne day, Lily and Mittens went for a walk in the park. They saw a shiny box on the ground. Lily and Mittens knew they were for. They opened the box and showed a beautiful red flower.\n\nLily was happy because she and Mittens played with the flower for a while. They had so much fun with their new toy. When it was time for dinner, Lily was sad to go back to the park, but she knew they would have more fun together.Once upon a time, there was a little girl named Lily. One day, Lily went to the park to play. She saw a pretty flower on the ground. She picked it and started to pet it. \n\n\"Look at that!\" said Lily.\n\n\"It's a pretty flower!\" said her mom.\n\nLily giggled and said, \"I wish I could catch it!\"\n\nHer mom laughed and said, \"You are a brilliant girl, but you know, sometimes, someone can make us happy.\"Once upon a time, there was a little girl named Lily. She had a very special toy. It was her favorite toy, a shiny red car that she loved very much. Lily loved it very much and always wore it on her head.\n\nOne day, Lily went to the park to play with her friends. She saw a little boy playing with a toy car and asked him if he wanted to play with it. The boy said yes, and they played together. Lily was very happy and played with the toy car all day long.\n\nBut then, Lily's mom told her they were going to the store",
+        "Lily found a tiny red door under the old tree. She put the blue door in the trunk and closed it. It was so big that it almost touched the branches. Lily felt sad because she loved her red door. But then, something strange happened. Lily felt a little ashamed of the dark. She remembered what had happened. She went inside and told her mommy what had happened. Her mommy was worried, but then she remembered something in the woods. She hugged Lily and said, \"Don't worry, we can find a good place to hide.\" They searched and searched, but they couldn't find anything. Lily was so happy and she hugged her mommy tightly.Once upon a time, there was a little girl named Lily. She loved to play outside and pick flowers. One day, she was going to the store with her mom. She saw a big, red basket of yellow flowers in the tree. It looked so pretty and pretty, with lots of colorful colors.\n\nAs she walked to the store, she saw a big, red ball. She wanted to get it, but it was too expensive. Lily asked her mom if she could have the ball. Her mom said no, it was too expensive and she couldn't buy it anymore.\n\nLily was sad, but she went home feeling sad. She didn't know that the store was too expensive, so she went home and told her mom what happened. Her mom hugged her and said, \"Don't worry, I will help you fix it.\" Lily smiled and felt better. She was so happy and she had her favorite toy to play with.Once upon a time, there was a little girl named Lily. She loved to play in the forest and make yummy food. One day, she went to the forest and saw a big, mean dog. The dog barked and scared Lily.\n\nLily ran to the dog and told him that the dog was just hiding. The dog barked and Lily felt safe. She thanked the dog and said goodbye. The dog wagged his tail and licked her face, and Lily continued to play in the forest.\n\nAs she was leaving the forest, Lily remembered the dog. She ran back to her mom and said, \"Look, Mommy! A puppy!\" Her mom smiled and said, \"That's a good dog, Lily. Thank you for trying to catch him.\"Once upon a time, there was a little girl named Lily. She loved to eat candy and would always ask her mommy for a candy. One",
+        "Tom wanted to help his friend learn how to share his toys. He wanted to play with Tom's cars and his cars and his car. They worked hard and made a big mess.\n\n\"Look at my car!\" Tom said. He grabbed the car from Tom's hand and ran to the floor. He had an idea.\n\n\"Ben, I can help you. But you can do it. I want to play with you.\" Tom said. He picked up the car and took a car from his hand. It was a soft and white car.\n\n\"Here, I have this car. It's our favorite.\" Tom said. He gave the car to Tom.\n\n\"Thank you, Tom. You are a good friend. Can I play with your car?\" Tom said.\n\n\"Sure, you can. But you have to be careful. The car is not real. It is fake. It can break the car with its mouth. You can have your own car to play with it.\" Tom said. He gave the car to the car.\n\n\"Thank you, Tom. You are a good friend. You are a good brother. You are a good friend. I will share and play with you.\" Tom said.\n\n\"Yes, Tom. I will be nice to Tom. Do you want to play with me?\" Tom said.\n\n\"Yes, I want to play with you?\" Tom said.\n\n\"Yes, I want to play with you. You are a good brother. You can make me happy.\" Tom said.\n\nTom and Tom agreed. They played with the car. They were having fun.\n\n\"Can we have a turn, too?\" Tom asked.\n\n\"Sure, but we have to promise to share our toys with each other.\" Tom said.\n\n\"Okay, Tom, you are a good brother. Maybe we can share some of your toys and toys.\" Tom said.\n\nThey hugged and shared the toys. They were very happy. They had their favorite toys and their imagination.\n\n\"Thank you for sharing and care. You are our best friend,\" Tom said.\n\n\"You're welcome, Tom. You are a good friend too,\" Tom said.\n\nThey hugged and smiled. They were best friends.Tom and Lily were playing in the park. They liked to run and slide and slide down the slide. They had a big ball and a tag.\n\n\"Look at me, Lily! I am a princess!\" Tom said"
+      ],
+      "seconds_per_token": 0.013358071631470618,
+      "tokens_per_second": 74.86110477533859,
+      "total_new_tokens": 7680,
+      "total_seconds": 102.58999012969434
+    },
+    {
+      "mode": "kv_cache",
+      "peak_cuda_memory_gib": 0.6900153160095215,
+      "runs": [
+        {
+          "elapsed_seconds": 5.079880806617439,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900110244750977,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.009921642200424685,
+          "tokens_per_second": 100.78976643173003
+        },
+        {
+          "elapsed_seconds": 5.18210421083495,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.010121297286787012,
+          "tokens_per_second": 98.80156383761832
+        },
+        {
+          "elapsed_seconds": 5.132393915206194,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.010024206865637098,
+          "tokens_per_second": 99.75851590094297
+        },
+        {
+          "elapsed_seconds": 5.135856905020773,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.010030970517618698,
+          "tokens_per_second": 99.691251035338
+        },
+        {
+          "elapsed_seconds": 5.127893731929362,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.010015417445174535,
+          "tokens_per_second": 99.8460628799655
+        },
+        {
+          "elapsed_seconds": 4.935943721327931,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.009640515080718615,
+          "tokens_per_second": 103.72889743205079
+        },
+        {
+          "elapsed_seconds": 4.909198448061943,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.009588278218870983,
+          "tokens_per_second": 104.29401162263622
+        },
+        {
+          "elapsed_seconds": 4.937237964011729,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.009643042898460408,
+          "tokens_per_second": 103.70170604132211
+        },
+        {
+          "elapsed_seconds": 5.187519486993551,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.01013187399803428,
+          "tokens_per_second": 98.69842441724141
+        },
+        {
+          "elapsed_seconds": 5.2371544050984085,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.010228817197457829,
+          "tokens_per_second": 97.7630141096402
+        },
+        {
+          "elapsed_seconds": 5.253053295891732,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.010259869718538539,
+          "tokens_per_second": 97.46712457694291
+        },
+        {
+          "elapsed_seconds": 5.238327105063945,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.010231107627078018,
+          "tokens_per_second": 97.74112798436056
+        },
+        {
+          "elapsed_seconds": 5.339712772984058,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Once upon a time",
+          "seconds_per_token": 0.010429126509734488,
+          "tokens_per_second": 95.88530727540851
+        },
+        {
+          "elapsed_seconds": 5.26446790387854,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Lily found a tiny red door under the old tree",
+          "seconds_per_token": 0.010282163874762773,
+          "tokens_per_second": 97.25579286423032
+        },
+        {
+          "elapsed_seconds": 5.279884135816246,
+          "new_tokens": 512,
+          "peak_cuda_memory_gib": 0.6900153160095215,
+          "prompt": "Tom wanted to help his friend learn how to share",
+          "seconds_per_token": 0.010312273702766106,
+          "tokens_per_second": 96.97182491692067
+        }
+      ],
+      "samples": [
+        "Once upon a time, there was a little girl named Lily. She loved to paint and paint. One day, she drew a big yellow picture with bright blue and purple crayon. But then, she had a selfish idea. She wanted to draw a pretty picture for her mommy.\n\nLily tried to find her blue crayon, but she couldn't find it. Her mommy saw her and said, \"No, Lily! Your crayon is not for looking, it's mine. You cannot find it, you won't know it.\"\n\nLily was sad and went home. She learned that it's not fair to ask for help when she needs it.Once upon a time, there was a little girl named Lily. She had a pet cat named Mittens. Mittens was very adorable and always gave her a lot of love.\n\nOne day, Lily and Mittens went for a walk in the park. They saw a shiny box on the ground. Lily and Mittens knew they were for. They opened the box and showed a beautiful red flower.\n\nLily was happy because she and Mittens played with the flower for a while. They had so much fun with their new toy. When it was time for dinner, Lily was sad to go back to the park, but she knew they would have more fun together.Once upon a time, there was a little girl named Lily. One day, Lily went to the park to play. She saw a pretty flower on the ground. She picked it and started to pet it. \n\n\"Look at that!\" said Lily.\n\n\"It's a pretty flower!\" said her mom.\n\nLily giggled and said, \"I wish I could catch it!\"\n\nHer mom laughed and said, \"You are a brilliant girl, but you know, sometimes, someone can make us happy.\"Once upon a time, there was a little girl named Lily. She had a very special toy. It was her favorite toy, a shiny red car that she loved very much. Lily loved it very much and always wore it on her head.\n\nOne day, Lily went to the park to play with her friends. She saw a little boy playing with a toy car and asked him if he wanted to play with it. The boy said yes, and they played together. Lily was very happy and played with the toy car all day long.\n\nBut then, Lily's mom told her they were going to the store",
+        "Lily found a tiny red door under the old tree. She put the blue door in the trunk and closed it. It was so big that it almost touched the branches. Lily felt sad because she loved her red door. But then, something strange happened. Lily felt a little ashamed of the dark. She remembered what had happened. She went inside and told her mommy what had happened. Her mommy was worried, but then she remembered something in the woods. She hugged Lily and said, \"Don't worry, we can find a good place to hide.\" They searched and searched, but they couldn't find anything. Lily was so happy and she hugged her mommy tightly.Once upon a time, there was a little girl named Lily. She loved to play outside and pick flowers. One day, she was going to the store with her mom. She saw a big, red basket of yellow flowers in the tree. It looked so pretty and pretty, with lots of colorful colors.\n\nAs she walked to the store, she saw a big, red ball. She wanted to get it, but it was too expensive. Lily asked her mom if she could have the ball. Her mom said no, it was too expensive and she couldn't buy it anymore.\n\nLily was sad, but she went home feeling sad. She didn't know that the store was too expensive, so she went home and told her mom what happened. Her mom hugged her and said, \"Don't worry, I will help you fix it.\" Lily smiled and felt better. She was so happy and she had her favorite toy to play with.Once upon a time, there was a little girl named Lily. She loved to play in the forest and make yummy food. One day, she went to the forest and saw a big, mean dog. The dog barked and scared Lily.\n\nLily ran to the dog and told him that the dog was just hiding. The dog barked and Lily felt safe. She thanked the dog and said goodbye. The dog wagged his tail and licked her face, and Lily continued to play in the forest.\n\nAs she was leaving the forest, Lily remembered the dog. She ran back to her mom and said, \"Look, Mommy! A puppy!\" Her mom smiled and said, \"That's a good dog, Lily. Thank you for trying to catch him.\"Once upon a time, there was a little girl named Lily. She loved to eat candy and would eat candy every day. One day, Lily's",
+        "Tom wanted to help his friend learn how to share his toys. He wanted to play with Tom's cars and his cars and his car. They worked hard and made a big mess.\n\n\"Look at my car!\" Tom said. He grabbed the car from Tom's hand and ran to the floor. He had an idea.\n\n\"Ben, I can help you. But you can do it. I want to play with you.\" Tom said. He picked up the car and took a car from his hand. It was a soft and white car.\n\n\"Here, I have this car. It's our favorite.\" Tom said. He gave the car to Tom.\n\n\"Thank you, Tom. You are a good friend. Can I play with your car?\" Tom said.\n\n\"Sure, you can. But you have to be careful. The car is not real. It is fake. It can break the car with its mouth. You can have your own car to play with it.\" Tom said. He gave the car to the car.\n\n\"Thank you, Tom. You are a good friend. You are a good brother. You are a good friend. I will share and play with you.\" Tom said.\n\n\"Yes, Tom. I will be nice to Tom. Do you want to play with me?\" Tom said.\n\n\"Yes, I want to play with you?\" Tom said.\n\n\"Yes, I want to play with you. You are a good brother. You can make me happy.\" Tom said.\n\nTom and Tom agreed. They played with the car. They were having fun.\n\n\"Can we have a turn, too?\" Tom asked.\n\n\"Sure, but we have to promise to share our toys with each other.\" Tom said.\n\n\"Okay, Tom, you are a good brother. Maybe we can share some of your toys and toys.\" Tom said.\n\nThey hugged and shared the toys. They were very happy. They had their favorite toys and their imagination.\n\n\"Thank you for sharing and care. You are our best friend,\" Tom said.\n\n\"You're welcome, Tom. You are a good friend too,\" Tom said.\n\nThey hugged and smiled. They were best friends.Tom and Lily were playing in the park. They liked to run and slide and slide down the slide. They had a big ball and a tag.\n\n\"Look at me, Lily! I am a princess!\" Tom said"
+      ],
+      "seconds_per_token": 0.010057373542804272,
+      "tokens_per_second": 99.42953751732409,
+      "total_new_tokens": 7680,
+      "total_seconds": 77.2406288087368
+    }
+  ],
+  "prompts": [
+    "Once upon a time",
+    "Lily found a tiny red door under the old tree",
+    "Tom wanted to help his friend learn how to share"
+  ]
+}

@@ -9,6 +9,7 @@ RUNS = {
     "tiny": Path("hpc_logs/tiny/project2-pretrain-gpt"),
     "small": Path("hpc_logs/small/project2-pretrain-gpt"),
     "medium": Path("hpc_logs/medium/project2-pretrain-gpt"),
+    "large": Path("hpc_logs/large/project2-pretrain-gpt"),
 }
 
 

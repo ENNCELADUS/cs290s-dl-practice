@@ -1,6 +1,8 @@
 #!/bin/bash
 # Usage:
+#   sbatch scripts/run_kv_cache_benchmark.sh large
 #   sbatch scripts/run_kv_cache_benchmark.sh medium
+#   sbatch scripts/run_kv_cache_benchmark.sh configs/experiments/kv_cache/large.yaml
 #   sbatch scripts/run_kv_cache_benchmark.sh configs/experiments/kv_cache/medium.yaml
 #SBATCH -J cs290s-kv-cache
 #SBATCH -p critical
@@ -18,8 +20,11 @@
 
 set -euo pipefail
 
-RUN_TARGET="${1:-medium}"
+RUN_TARGET="${1:-large}"
 case "${RUN_TARGET}" in
+    large)
+        BENCHMARK_CONFIG="configs/experiments/kv_cache/large.yaml"
+        ;;
     medium)
         BENCHMARK_CONFIG="configs/experiments/kv_cache/medium.yaml"
         ;;
@@ -27,7 +32,7 @@ case "${RUN_TARGET}" in
         BENCHMARK_CONFIG="${RUN_TARGET}"
         ;;
     *)
-        echo "Usage: sbatch scripts/run_kv_cache_benchmark.sh {medium|path/to/config.yaml}" >&2
+        echo "Usage: sbatch scripts/run_kv_cache_benchmark.sh {large|medium|path/to/config.yaml}" >&2
         exit 2
         ;;
 esac

@@ -1,7 +1,8 @@
 # Basic Task Experiment Archive
 
-This note archives the three completed TinyStories GPT size-comparison runs on the HPC.
-It follows Sections 2-5 of the Project 2 report requirements and intentionally omits
+This note archives the completed TinyStories GPT size-comparison runs on the HPC:
+the required `tiny`, `small`, and `medium` ladder plus one larger follow-up run. It
+follows Sections 2-5 of the Project 2 report requirements and intentionally omits
 the Introduction, Discussion, Conclusion, and Advanced Task sections.
 
 ## 2. Dataset & Preprocessing
@@ -33,11 +34,12 @@ classes, `transformers.Trainer`, or `torch.nn.Transformer*` layers are used.
 | tiny | 4 | 4 | 256 | 512 | 16.16M |
 | small | 8 | 6 | 384 | 512 | 33.69M |
 | medium | 12 | 8 | 512 | 512 | 63.82M |
+| large | 16 | 12 | 768 | 512 | 152.40M |
 
 ## 4. Training Setup
 
 Training is controlled by Hugging Face Accelerate. The final archived comparison uses
-4 visible GPUs with NCCL for all three model sizes. All runs used fp16 mixed precision,
+4 visible GPUs with NCCL for all model sizes. All runs used fp16 mixed precision,
 AdamW, cosine learning-rate scheduling with warmup, gradient clipping, TensorBoard
 logging, checkpointing every 1,000 steps, and sample generation every 200 validation
 steps.
@@ -77,25 +79,26 @@ from the earlier 4-GPU run.
 | tiny | 907715 | 4 / NCCL | 131.07M | 7.97 min | 274,182 | 3.79 GiB | 2.270 | 9.68 |
 | small | 907707 | 4 / NCCL | 131.07M | 15.20 min | 143,745 | 4.92 GiB | 2.048 | 7.75 |
 | medium | 907490 | 4 / NCCL | 131.07M | 26.65 min | 81,969 | 6.64 GiB | 2.108 | 8.23 |
+| large | 907789 | 4 / NCCL | 131.07M | 51.81 min | 42,164 | 10.68 GiB | 1.927 | 6.87 |
 
-After rerunning `tiny` and `small` on 4 GPUs, all three models use the same total token
-budget. The `small` model reaches the best final validation perplexity, while `medium`
-has lower final training loss but slightly worse validation loss.
+All four runs use the same total token budget. The `large` follow-up reaches the best
+validation perplexity, improving over the best medium diagnostic result, but it is
+roughly 2x slower than `medium` and uses substantially more GPU memory.
 
 ### Validation Curves
 
-| Step | tiny loss | tiny PPL | small loss | small PPL | medium loss | medium PPL |
-|---:|---:|---:|---:|---:|---:|---:|
-| 200 | 3.670 | 39.26 | 3.915 | 50.15 | 4.108 | 60.84 |
-| 400 | 3.236 | 25.42 | 3.406 | 30.14 | 3.776 | 43.65 |
-| 600 | 3.193 | 24.35 | 3.333 | 28.01 | 3.726 | 41.50 |
-| 800 | 2.962 | 19.34 | 2.995 | 19.99 | 3.503 | 33.22 |
-| 1000 | 2.662 | 14.33 | 2.559 | 12.92 | 2.990 | 19.88 |
-| 1200 | 2.450 | 11.59 | 2.268 | 9.66 | 2.518 | 12.40 |
-| 1400 | 2.352 | 10.51 | 2.137 | 8.48 | 2.307 | 10.05 |
-| 1600 | 2.344 | 10.42 | 2.127 | 8.39 | 2.288 | 9.85 |
-| 1800 | 2.325 | 10.23 | 2.114 | 8.28 | 2.233 | 9.32 |
-| 2000 | 2.270 | 9.68 | 2.048 | 7.75 | 2.108 | 8.23 |
+| Step | tiny loss | tiny PPL | small loss | small PPL | medium loss | medium PPL | large loss | large PPL |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 200 | 3.670 | 39.26 | 3.915 | 50.15 | 4.108 | 60.84 | 4.066 | 58.30 |
+| 400 | 3.236 | 25.42 | 3.406 | 30.14 | 3.776 | 43.65 | 3.576 | 35.73 |
+| 600 | 3.193 | 24.35 | 3.333 | 28.01 | 3.726 | 41.50 | 3.492 | 32.85 |
+| 800 | 2.962 | 19.34 | 2.995 | 19.99 | 3.503 | 33.22 | 3.231 | 25.30 |
+| 1000 | 2.662 | 14.33 | 2.559 | 12.92 | 2.990 | 19.88 | 2.636 | 13.96 |
+| 1200 | 2.450 | 11.59 | 2.268 | 9.66 | 2.518 | 12.40 | 2.203 | 9.05 |
+| 1400 | 2.352 | 10.51 | 2.137 | 8.48 | 2.307 | 10.05 | 2.014 | 7.50 |
+| 1600 | 2.344 | 10.42 | 2.127 | 8.39 | 2.288 | 9.85 | 2.000 | 7.39 |
+| 1800 | 2.325 | 10.23 | 2.114 | 8.28 | 2.233 | 9.32 | 1.996 | 7.36 |
+| 2000 | 2.270 | 9.68 | 2.048 | 7.75 | 2.108 | 8.23 | 1.927 | 6.87 |
 
 ### Medium Hyperparameter Diagnostics
 
@@ -137,9 +140,12 @@ under `outputs/<model>/samples/step_2000_sample_*.txt` on the HPC.
 | medium | 1 | Lily sees a butterfly and a cricket in the park; the prose is fluent but the cricket interaction is semantically odd. |
 | medium | 2 | Timmy breaks a toy car after spilling it in his room; the story has clearer event progression but imperfect causality. |
 | medium | 3 | Lily plays with friends near a swing until it rains; the style matches TinyStories but some phrases remain awkward. |
+| large | 1 | Lily receives a box of powder and argues with her brother; the prose is fluent but the object use becomes repetitive and the sample ends mid-sentence. |
+| large | 2 | Lily meets Sam, shares a red ball, and they play together; this is the most coherent large sample, with a clear friendly-story arc. |
+| large | 3 | Lily finds a pile of leaves that turns into fire; the sample keeps a TinyStories tone but has a semantic inconsistency around playing with fire. |
 
 Overall, increasing from `tiny` to `small` improves validation perplexity clearly under
 the same token budget. The untuned `medium` initially underperformed `small`, but the
-diagnostic runs show that a longer warmup lets `medium` reach the best validation
-perplexity. This suggests larger models can help on this subset, but they are more
-sensitive to optimization hyperparameters.
+diagnostic runs show that a longer warmup fixes most of that gap. The `large` follow-up
+then improves validation perplexity further, suggesting there is still scaling headroom
+on this TinyStories subset, with the expected tradeoff in throughput and memory.

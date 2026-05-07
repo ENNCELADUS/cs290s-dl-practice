@@ -1,10 +1,10 @@
 #!/bin/bash
 # Usage:
-#   sbatch scripts/run_kv_cache_benchmark.sh large
-#   sbatch scripts/run_kv_cache_benchmark.sh medium
-#   sbatch scripts/run_kv_cache_benchmark.sh configs/experiments/kv_cache/large.yaml
-#   sbatch scripts/run_kv_cache_benchmark.sh configs/experiments/kv_cache/medium.yaml
-#SBATCH -J cs290s-kv-cache
+#   sbatch scripts/run_hpc.sh tiny
+#   sbatch scripts/run_hpc.sh small
+#   sbatch scripts/run_hpc.sh medium
+#   sbatch scripts/run_hpc.sh configs/experiments/diagnostics/medium_lr_6e4.yaml
+#SBATCH -J cs290s-project2
 #SBATCH -p critical
 #SBATCH -A hexm-critical
 #SBATCH -N 1
@@ -20,19 +20,19 @@
 
 set -euo pipefail
 
-RUN_TARGET="${1:-large}"
+RUN_TARGET="${1:-tiny}"
 case "${RUN_TARGET}" in
-    large)
-        BENCHMARK_CONFIG="configs/experiments/kv_cache/large.yaml"
+    tiny|small|medium)
+        EXPERIMENT_CONFIG="configs/experiments/${RUN_TARGET}.yaml"
         ;;
-    medium)
-        BENCHMARK_CONFIG="configs/experiments/kv_cache/medium.yaml"
+    smoke)
+        EXPERIMENT_CONFIG="configs/experiments/smoke.yaml"
         ;;
     *.yaml|*.yml)
-        BENCHMARK_CONFIG="${RUN_TARGET}"
+        EXPERIMENT_CONFIG="${RUN_TARGET}"
         ;;
     *)
-        echo "Usage: sbatch scripts/run_kv_cache_benchmark.sh {large|medium|path/to/config.yaml}" >&2
+        echo "Usage: sbatch scripts/run_hpc.sh {smoke|tiny|small|medium|path/to/config.yaml}" >&2
         exit 2
         ;;
 esac
@@ -43,7 +43,7 @@ cd "${REPO_ROOT}"
 source .venv/bin/activate
 export PYTHONUNBUFFERED=1
 export TOKENIZERS_PARALLELISM=false
-export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-16}"
 export HF_HOME="${REPO_ROOT}/.cache/huggingface"
 export HF_DATASETS_CACHE="${HF_HOME}/datasets"
 export HF_HUB_CACHE="${HF_HOME}"
@@ -97,6 +97,7 @@ PY
 }
 
 GPU_IDS="$(detect_visible_gpu_ids | tr -d '[:space:]')"
+ORIGINAL_GPU_IDS="${GPU_IDS}"
 
 filter_healthy_gpu_ids() {
     local raw_ids="$1"
@@ -152,14 +153,6 @@ PY
 )"
 fi
 
-GPU_IDS="$(GPU_IDS="${GPU_IDS}" python - <<'PY'
-import os
-
-gpu_ids = [item for item in os.environ["GPU_IDS"].split(",") if item]
-print(",".join(gpu_ids[:1]))
-PY
-)"
-
 NUM_GPUS="$(GPU_IDS="${GPU_IDS}" python - <<'PY'
 import os
 
@@ -173,6 +166,33 @@ fi
 
 export CUDA_VISIBLE_DEVICES="${GPU_IDS}"
 echo "CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}"
-echo "Launching KV cache benchmark with config ${BENCHMARK_CONFIG}."
+echo "Launching Accelerate with ${NUM_GPUS} process(es)."
 
-python benchmark_kv_cache.py --config "${BENCHMARK_CONFIG}"
+ORIGINAL_NUM_GPUS="$(GPU_IDS="${ORIGINAL_GPU_IDS}" python - <<'PY'
+import os
+
+print(len([item for item in os.environ["GPU_IDS"].split(",") if item]))
+PY
+)"
+if [[ "${NUM_GPUS}" -lt "${ORIGINAL_NUM_GPUS}" ]]; then
+    export PROJECT2_DDP_BACKEND="${PROJECT2_DDP_BACKEND:-gloo}"
+fi
+if [[ -n "${PROJECT2_DDP_BACKEND:-}" ]]; then
+    echo "PROJECT2_DDP_BACKEND=${PROJECT2_DDP_BACKEND}"
+fi
+
+ACCELERATE_ARGS=(
+    --mixed_precision fp16
+    --num_processes "${NUM_GPUS}"
+    --num_machines 1
+    --dynamo_backend no
+)
+
+if [[ "${NUM_GPUS}" -gt 1 ]]; then
+    ACCELERATE_ARGS+=(--multi_gpu)
+fi
+
+python -m accelerate.commands.launch \
+    "${ACCELERATE_ARGS[@]}" \
+    train.py \
+    --config "${EXPERIMENT_CONFIG}"
